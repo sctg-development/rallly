@@ -104,6 +104,6 @@ jobs:
             SELF_HOSTED=true
           platforms: linux/arm64, linux/amd64
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha
           push: true
           tags: sctg/rallly:${{ steps.version.outputs.release }}, sctg/rallly:latest
