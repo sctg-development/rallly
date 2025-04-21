@@ -92,7 +92,7 @@ jobs:
           REPO="rallly"
           latest_release=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest")
           release_name=$(echo "$latest_release" | grep -o '"name": *"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "relase=$release_name" >> $GITHUB_OUTPUT
+          echo "release=$release_name" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -105,4 +105,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
-          tags: sctg/rallly:${{ steps.version.outputs.release_name }}, sctg/rallly:latest
+          tags: sctg/rallly:${{ steps.version.outputs.release }}, sctg/rallly:latest
