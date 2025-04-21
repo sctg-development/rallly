@@ -57,6 +57,7 @@ jobs:
           sudo apt-get remove -y '^clang.*' || true
           sudo apt-get remove -y '^gcc-1.*' || true
           sudo apt-get remove -y 'php.*' || true
+          sudo apt-get remove -y '^openjdk.*' || true
           sudo apt-get remove -y '.*temurin*' || true
           sudo apt-get remove -y 'mysql.*' || true
           sudo apt-get remove -y azure-cli || true
@@ -69,11 +70,14 @@ jobs:
           sudo apt-get remove -y mono-devel || true
           sudo apt-get remove -y python3 || true
           sudo apt-get remove -y snapd || true
+          sudo apt-get remove -y libgl1-mesa-dri || true
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
           df -h
           echo "Removing large directories"
-          rm -rf /usr/share/dotnet/
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
           df -h
       - name: Show 100 most large packages
         shell: bash
