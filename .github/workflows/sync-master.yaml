@@ -52,6 +52,9 @@ jobs:
           sudo apt-get remove -y '^ghc-.*' || true
           sudo apt-get remove -y '^dotnet-.*' || true
           sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y '^gfortran-.*' || true
+          sudo apt-get remove -y '^gruby.*' || true
+          sudo apt-get remove -y '^clang.*' || true
           sudo apt-get remove -y '^gcc-1.*' || true
           sudo apt-get remove -y 'php.*' || true
           sudo apt-get remove -y '.*temurin*' || true
@@ -65,12 +68,18 @@ jobs:
           sudo apt-get remove -y powershell || true
           sudo apt-get remove -y mono-devel || true
           sudo apt-get remove -y python3 || true
+          sudo apt-get remove -y snapd || true
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
           df -h
           echo "Removing large directories"
           rm -rf /usr/share/dotnet/
           df -h
+      - name: Show 100 most large packages
+        shell: bash
+        run: |
+          echo "Show 100 most large packages"
+          dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
       - name: Check out the repo
         uses: actions/checkout@v4
       - name: Set up QEMU
