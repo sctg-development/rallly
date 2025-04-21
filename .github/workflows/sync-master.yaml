@@ -4,7 +4,9 @@ on:
       # scheduled at 07:00 every Monday 
   
     workflow_dispatch:  # click the button on Github repo!
-  
+
+    
+name: Sync main with upstream and build Docker image
   
 jobs:
     sync_with_upstream:
