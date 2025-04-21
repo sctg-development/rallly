@@ -39,21 +39,27 @@ jobs:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
-      - name: Free CI
+      - name: Show 100 most large packages
+        shell: bash
+        run: |
+          echo "Show 100 most large packages"
+          dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
+      - name: Free CI for docker builds
         shell: bash
         run: |
           df -h
           echo "Removing large packages"
-          sudo apt-get remove -y '^ghc-.*'
-          sudo apt-get remove -y '^dotnet-.*'
-          sudo apt-get remove -y '^llvm-.*'
-          sudo apt-get remove -y 'php.*'
+          sudo apt-get remove -y '^ghc-.*' || true
+          sudo apt-get remove -y '^dotnet-.*' || true
+          sudo apt-get remove -y '^llvm-.*' || true
+          sudo apt-get remove -y 'php.*' || true
           sudo apt-get remove -y azure-cli || true
-          sudo apt-get remove -y google-cloud-sdk  || true
-          sudo apt-get remove -y hhvm google-chrome-stable  || true
-          sudo apt-get remove -y firefox  || true
-          sudo apt-get remove -y powershell  || true
+          sudo apt-get remove -y google-cloud-sdk || true
+          sudo apt-get remove -y hhvm google-chrome-stable || true
+          sudo apt-get remove -y firefox || true
+          sudo apt-get remove -y powershell || true
           sudo apt-get remove -y mono-devel || true
+          sudo apt-get remove -y python3 || true
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
           df -h
@@ -74,11 +80,14 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: sctg/rallly
+      - name: Extract latest version from lukevella/rallly
+        id: version
+        run: |
+          OWNER="lukevella"
+          REPO="rallly"
+          latest_release=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest")
+          release_name=$(echo "$latest_release" | grep -o '"name": *"[^"]*"' | head -1 | cut -d'"' -f4)
+          echo "relase=$release_name" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -91,5 +100,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: sctg/rallly:${{ steps.version.outputs.release_name }}, sctg/rallly:latest
