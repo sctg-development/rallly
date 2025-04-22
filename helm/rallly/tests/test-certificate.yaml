@@ -1,0 +1,20 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-certificate
+  namespace: cert-manager
+spec:
+  secretName: test-certificate-secret
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+  commonName: demo.local
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - demo.local
+    - localhost
+---
