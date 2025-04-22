@@ -1,0 +1,25 @@
+name: rallly
+apiVersion: v2
+version: 0.1.0
+description: A Helm chart for deploying the Rallly application with PostgreSQL support.
+maintainers:
+  - name: Ronan Le Meillat
+    email: aeltorio@github.com
+keywords:
+  - rallly
+  - postgres
+  - helm
+  - chart
+home: https://example.com
+sources:
+  - https://github.com/sctg-development/rallly
+dependencies:
+  - name: postgresql
+    version: 16.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgres.enabled
+    tags:
+      - database
+  - name: flex-smtpd
+    version: 0.1.x
+    repository: https://helm-repo.highcanfly.club

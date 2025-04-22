@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-flex-smtpd
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-flex-smtpd
+  updateStrategy:
+    type: {{ .Values.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-flex-smtpd
+    spec:
+      containers:
+        - name: {{ .Release.Name }}-flex-smtpd
+          image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: USE_LETSENCRYPT
+              value: "{{ .Values.config.useLetsEncrypt }}"
+            - name: USE_CLOUDFLARE_DDNS
+              value: "{{ .Values.config.useCloudflareDDNS }}"
+            - name: USE_DKIM_PARSING
+              value: "{{ .Values.config.useDKIMParsing }}"
+            - name: USE_LETSENCRYPT_STAGING
+              value: "{{ .Values.config.useLetsEncryptStaging }}"
+            - name: POSTFIX_HOSTNAME
+              value: "{{ .Values.config.postfixHostname }}"
+            - name: CLOUDFLARE_DNS_RECORDS
+              value: "{{ .Values.config.cloudflareDnsRecords }}"
+            - name: ALLOWED_SENDER_DOMAINS
+              value: "{{ .Values.config.allowedSenderDomains }}"
+            - name: DKIM_SELECTOR
+              value: "{{ .Values.config.dkimSelector }}"
+            {{- if .Values.config.relayHost }}
+            - name: RELAYHOST
+              value: "{{ .Values.config.relayHost }}"
+            {{- end}}
+            {{- if and .Values.config.relayHostPassword .Values.config.relayHostUser .Values.config.relayHost }}
+            - name: RELAYHOST_USERNAME
+              value: "{{ .Values.config.relayHostUser }}"
+            {{- end}}
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-flex-smtpd-secrets
+          {{- if .Values.config.certificateSecretName}}
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/postfix/certs
+              readOnly: true
+          {{- end}}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+      {{- if .Values.config.certificateSecretName}}
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: {{ .Values.config.certificateSecretName }}
+      {{- end}}

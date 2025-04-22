@@ -1,0 +1,5 @@
+apiVersion: v2
+description: A Helm chart deploying a SMTP relay server https://github.com/highcanfly-club/docker-smtp-relay
+name: flex-smtpd
+type: application
+version: 0.1.6

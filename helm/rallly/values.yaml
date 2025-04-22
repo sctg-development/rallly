@@ -1,0 +1,54 @@
+database:
+  url: postgres://postgres:postgres@rallly-postgresql/rallly
+
+host: rallly.demo
+updateStrategy: RollingUpdate
+secretPassword: "abcdef1234567890abcdef1234567890"
+supportEmail: "support@example.org"
+baseUrl: "https://rallly.demo:57176"
+
+postgresql:
+  auth:
+    postgresPassword: postgres
+    enablePostgresUser: true
+    database: rallly
+
+tls:
+  enabled: true
+
+ingress:
+  enabled: true
+  clusterIssuer: ca-issuer
+  className: nginx
+
+image:
+  tag: sctg/rallly:latest
+
+labels:
+
+flex-smtpd:
+  updateStrategy: Recreate # Recreate | RollingUpdate
+  service:
+    name: smtpd
+  config:
+    useCloudflareDDNS: "0"
+    useLetsEncrypt: "0"
+    useLetsEncryptStaging: "0"
+    certificateIssuer: ca-issuer
+    useDKIMParsing: "1"
+    postfixHostname: smtp-relay.example.org
+    allowedSenderDomains: example.org
+    # dkimSelector: dkim-flex-smtpd
+    dkimPrivateKey: "-----BEGIN PRIVATE KEY-----|MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCOUP50zChyx5E+|/C7ZSc7NGcxzChht3jx2mumcrtgEeOv9qNRkoDiZbrx/K7KAr25n0dnuZXwmsHcR|iYW6i1m0Lm3Y5U2mfI2GJHEDgxLjEEy2Bi+4NiYpIUiX3X3SVf7ByvPmqBh5waPw|XX6/apUQ9OO18vnfd5B0a+ItqubdJeYViicFgxtS2HJcAFZcwXAyMZSOlTEg/Peo|I8J2BTOUqDH65PodPlaKzTKbiwq0hGktqYS7KIdOGcP/JUcTWJtcW63IBaoRN3kB|1989vNaGaT09JhV77c7UdBwdY2omH7qKFyFTPCn1OceSxlM1Yzp372GqkRAfxqlE|xft749f9AgMBAAECggEAGw1y3S1cx/q/FZ+24ReKX812ZezGmYXr7OjEHQRQbEM3|KtPvscQSFjpqSus5xoPygvotSMeSSsFzFMqVONFZ5yoHN/pYoRvehCADupTtH2v/|BP/WjNgAN4PL6pBQJU4y+9ASPmd4JZblTKDdIdJHDT7b1T+fd3bhJvxF9YPd2C4e|RRuMOQyt7FaY9iokhta2/hd/w9tAgzK2Fc8bLhR1QyjbDNcLaWC3BI05W38eCgim|HDRdUfTfX5Bx2cOwiMHy6Tz8TxvQz10iCwJV9qaUvki+IGY8zM7QjwCj9bapnDt5|6NoG3Og01l+W1kBJZWLEk5pOfcSI4kAv56V/r1WGyQKBgQC813wvmOe3ZHVo/H9J|x3IpdFyfKB+wwUezE4Ycl196UUWyME9MbXAq2+IBvUyvdHmhyg8WaVSBznR3EP9A|T4VhqFcOWxLUlzFPUcfZkxJKI0UuWaxkQbvg316uVW4X+mqUxTKnC9mOdT949Xsz|4NDrPchwuZPWfgs16hjDsZiQuQKBgQDA7cBDIF7aKtKIJHVObJC+x699Vn3gyFyj|LKWkUx5sleyje1LPfK+cUIPBzyfZUre6/EARv33XLnLBd5J8RzFnvYt7lIt4x42f|I/A2TrjNNpr227M/SjikQ//zRfr/CkGmytu4G786pL9Uud1r1Rrhp1tvwltVWNzG|Az7tZPM3ZQKBgQCJmFkcNUVhEwmZnaEBmRlNq0NxlELC/5HGoYsuef1Pmrg1xY2C|GpuIHv7mVY/yp+OYRyoHImg4zL1/pBrYORjut0H3a9SkoiWDrgr4NXk2G8zkoOJD|isHib98FF6pIPmY6UBVAMhoq+rNs5zEF8+FGBpZtzEo0F1MDzbaNoHGRwQKBgQCp|b+Sbz5EeP9+Ya5SOpLBWrR8Fj/GLecxKDosHD2y35s/mIAfxa8r7GIcurlWL+qab|1LAcJjZJxmRIX1BKT2gneQNILIR1NaS+cBymRWrt55gfV4JMAk5Ojd369KnkVUil|SKHBRrUits/GhFnfO1CZf5bBR0tZYGq8iNs6OJ+WNQKBgQCo8mvwdTeTPFuzuLe5|kK39xXl6XFB/6rv9dKYzNT1AAO1ACdmD2xBOnl2tQeAW7mtOFBXKeYBgnMQ1q2Cw|IOGvb21PRcBDE53miqzinuFfS7HKpXbZO89KMd5B533oUDoi66blXt41Uc/1IlKi|zZ1L1191NyXf6M3S0pkX9CUN6w==|-----END PRIVATE KEY-----"
+    # relayHost: "[smtp.gmail.com]:587"
+    relayHost: ""
+    # relayHostUser: "myrelay@gmail.com"
+    elayHostUser: ""
+    # relayHostPassword: "aaaa bbbb cccc dddd"
+    # cloudflareApiKey: jt1rS5JGdGii0Xvet4ioB4oBrNLGhtaAmluvY71xWWLk
+    # cloudflareDnsRecords: smtp-relay.domain.com
+    # cloudflareZoneId: "e361a885285123bbe08f365dfe9345f7"
+    # certificateSecretName: smtp-relay-domain-com-tls
+    certificateIssuerKind: ClusterIssuer
+  image:
+    tag: v4.4.0a

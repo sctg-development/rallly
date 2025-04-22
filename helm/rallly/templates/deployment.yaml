@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rallly.fullname" . }}
+  labels:
+    app: {{ include "rallly.name" . }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "rallly.name" . }}
+  strategy:
+    type: {{ .Values.updateStrategy }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "rallly.name" . }}
+    spec:
+      containers:
+        - name: rallly
+          image: {{ include "rallly.imageTag" . }}  # Replace with your actual image
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.database.url | quote }}
+            - name: NEXT_PUBLIC_APP_VERSION
+              value: {{ .Chart.AppVersion | quote }}
+            - name: NEXT_PUBLIC_SELF_HOSTED
+              value: {{ .Values.selfHosted | quote }}
+            - name: SECRET_PASSWORD
+              value: {{ .Values.secretPassword | quote }}
+            - name: SUPPORT_EMAIL
+              value: {{ .Values.supportEmail | quote }}
+            - name: NEXT_PUBLIC_BASE_URL
+              value: {{ .Values.baseUrl | quote }}
+            - name: SMTP_HOST
+              value: "smtpd"
+            - name: SMTP_PORT
+              value: "25"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
