@@ -23,6 +23,7 @@ ingress:
 
 image:
   tag: sctg/rallly:latest
+  pullPolicy: IfNotPresent
 
 labels:
 
