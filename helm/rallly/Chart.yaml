@@ -1,6 +1,6 @@
 name: rallly
 apiVersion: v2
-version: 0.1.1
+version: 0.1.2
 description: A Helm chart for deploying the Rallly application with PostgreSQL support.
 maintainers:
   - name: Ronan Le Meillat

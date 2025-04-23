@@ -19,6 +19,7 @@ spec:
       containers:
         - name: rallly
           image: {{ include "rallly.imageTag" . }}  # Replace with your actual image
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: 3000
           env:
