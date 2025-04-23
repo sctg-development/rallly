@@ -50,7 +50,8 @@ USER nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-start.sh ./
 COPY --from=builder --chown=nextjs:nodejs /app/packages/database/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/dist/proize.js ./proize.js
+COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/dist/*.* ./proize/
+COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/src/prisma/*.node ./proize/
 
 COPY --from=installer /app/apps/web/next.config.js .
 COPY --from=installer /app/apps/web/package.json .
