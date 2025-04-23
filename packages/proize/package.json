@@ -1,0 +1,29 @@
+{
+  "name": "@sctg/rallly-proize",
+  "version": "1.0.0",
+  "description": "Proize Rallly self-hosted",
+  "license": "AGPL-3.0-only",
+  "author": "Ronan Le Meillat",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "_get-schema": "curl https://raw.githubusercontent.com/sctg-development/rallly/refs/heads/main/packages/database/prisma/schema.prisma -o ./schema.prisma",
+    "get-schema": "cp ../database/prisma/schema.prisma .",
+    "add-esm-generator": "echo '' >> ./schema.prisma && echo \"generator client-esm {\" >> ./schema.prisma && echo '  provider = \"prisma-client\"'  >> ./schema.prisma && echo '  binaryTargets = [\"native\"]' >> ./schema.prisma && echo '  previewFeatures = [\"relationJoins\"]' >> ./schema.prisma && echo '  output = \"./src/prisma\"' >> ./schema.prisma && echo \"}\" >> ./schema.prisma",
+    "test": "true",
+    "build": "npm run get-schema && npm run add-esm-generator && npx prisma generate --generator client-esm && npx rollup --config rollup.config.ts --configPlugin typescript"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "@types/node": "^22.14.1",
+    "prisma": "^6.6.0",
+    "rollup": "^4.40.0",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.6.0",
+    "path": "^0.12.7"
+  }
+}
