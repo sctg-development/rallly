@@ -14,12 +14,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
- 
-  mailpit:
-    image: axllent/mailpit
-    ports:
-      - "8025:8025"
-      - "1025:1025"
 
   rallly_selfhosted:
     build:
@@ -35,19 +29,8 @@ services:
       - 3000:3000
     environment:
       - DATABASE_URL=postgres://postgres:postgres@rallly_db/rallly
-      - SMTP_HOST=mailpit
-      - SMTP_PORT=1025
-      - NEXT_PUBLIC_SELF_HOSTED=false
-      - SUPPORT_EMAIL=support@sctg.eu.org
-      - SECRET_PASSWORD=abcdef1234567890abcdef1234567890
-      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
-      - AUTH_URL=http://localhost:3000
-      - SENTRY_IGNORE_API_RESOLUTION_ERROR=1
-      - SMTP_SECURE=false
-      - SMTP_USER=
-      - SMTP_PASS=
-    # env_file:
-    #   - .env
+    env_file:
+      - .env
 
 volumes:
   db-data:

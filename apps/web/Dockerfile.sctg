@@ -3,6 +3,19 @@ FROM node:20 AS builder
 WORKDIR /app
 RUN yarn global add turbo
 COPY . .
+# SCTG Branding
+RUN cp assets/images/logo-sctg.svg assets/images/logo-color.svg
+RUN cp assets/images/logo-sctg.svg apps/web/public/logo-color.svg
+RUN cp assets/images/logo-sctg-mark.svg apps/web/public/images/logo-mark.svg
+RUN cp assets/images/logo-sctg-mark.png apps/web/public/images/rallly-logo-mark.png
+RUN cp assets/images/logo-sctg.svg apps/web/public/static/logo.svg
+RUN cp assets/images/logo-sctg.svg apps/landing/public/logo.svg
+RUN cp assets/images/logo-sctg.png apps/web/public/logo.png
+RUN cp assets/images/logo-sctg.png apps/landing/public/logo.png
+RUN cp assets/images/logo-sctg.png packages/emails/src/previews/static/logo.png
+#RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://support.rallly.co" | xargs sed -i 's|https://support\.rallly\.co|https://sctg.eu.org|g'
+RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://rallly.co" | xargs sed -i 's|https://rallly\.co|https://sctg.eu.org|g'
+RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "rallly.co" | xargs sed -i 's|"rallly.co"|"SCTG"|g'
 RUN cd packages/proize && npm install --force && npm run build && cd -
 RUN turbo prune --scope=@rallly/web --docker
 
