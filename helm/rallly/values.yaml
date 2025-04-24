@@ -2,9 +2,11 @@ database:
   url: postgres://postgres:postgres@rallly-postgresql/rallly
 
 host: rallly.demo
+apiSecret: "abcdef1234567890abcdef1234567890"
 updateStrategy: RollingUpdate
 secretPassword: "abcdef1234567890abcdef1234567890"
 supportEmail: "support@example.org"
+noReplyEmail: "no-reply@example.org"
 baseUrl: "https://rallly.demo:57176"
 
 postgresql:

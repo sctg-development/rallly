@@ -33,12 +33,16 @@ spec:
               value: {{ .Values.secretPassword | quote }}
             - name: SUPPORT_EMAIL
               value: {{ .Values.supportEmail | quote }}
+            - name: NOREPLY_EMAIL
+              value: {{ .Values.noReplyEmail | quote }}
             - name: NEXT_PUBLIC_BASE_URL
               value: {{ .Values.baseUrl | quote }}
             - name: SMTP_HOST
               value: "smtpd"
             - name: SMTP_PORT
               value: "25"
+            - name: API_SECRET
+              value: {{ .Values.apiSecret | quote }}
           resources:
             requests:
               memory: "256Mi"
