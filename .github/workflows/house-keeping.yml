@@ -12,11 +12,11 @@ jobs:
     steps:
       - name: Check required variables
         run: |
-          if [ -z "${{ vars.APP_BASE_URL }}" ]; then
+          if [ -z "${{ secrets.APP_BASE_URL }}" ]; then
             echo "Error: APP_BASE_URL is not set. Please set this variable in your GitHub repository settings."
             exit 1
           fi
-          echo "BASE_URL=${{ vars.APP_BASE_URL }}" >> $GITHUB_ENV
+          echo "BASE_URL=${{ secrets.APP_BASE_URL }}" >> $GITHUB_ENV
       - name: Mark inactive polls as deleted
         run: |
           curl -X "POST" --fail "${BASE_URL}/api/house-keeping/delete-inactive-polls" \
