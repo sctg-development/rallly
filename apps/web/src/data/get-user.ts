@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { requireUser } from "@/next-auth";
+import { isSelfHosted } from "@/utils/constants";
 
 export const getUser = cache(async () => {
   const { userId } = await requireUser();
@@ -18,6 +19,8 @@ export const getUser = cache(async () => {
       image: true,
       locale: true,
       timeZone: true,
+      timeFormat: true,
+      weekStart: true,
       subscription: {
         select: {
           active: true,
@@ -37,6 +40,8 @@ export const getUser = cache(async () => {
     image: user.image ?? undefined,
     locale: user.locale ?? undefined,
     timeZone: user.timeZone ?? undefined,
-    isPro: user.subscription?.active ?? false,
+    timeFormat: user.timeFormat ?? undefined,
+    weekStart: user.weekStart ?? undefined,
+    isPro: Boolean(isSelfHosted || user.subscription?.active),
   };
 });
