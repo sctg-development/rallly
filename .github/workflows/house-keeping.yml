@@ -28,3 +28,9 @@ jobs:
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer ${API_SECRET}" \
           --max-time 300
+      - name: Remove deleted polls
+        run: |
+          curl -X "POST" --fail "${BASE_URL}/api/proize/proize-all-users" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${API_SECRET}" \
+          --max-time 300
