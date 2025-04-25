@@ -114,7 +114,7 @@ jobs:
           file: ./apps/web/Dockerfile.sctg
           context: .
           build-args: |
-            SELF_HOSTED=true
+            SELF_HOSTED=false
           platforms: linux/arm64, linux/amd64
           cache-from: type=gha
           cache-to: type=gha

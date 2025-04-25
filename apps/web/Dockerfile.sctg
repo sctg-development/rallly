@@ -16,6 +16,7 @@ RUN cp assets/images/logo-sctg.png packages/emails/src/previews/static/logo.png
 #RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://support.rallly.co" | xargs sed -i 's|https://support\.rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://rallly.co" | xargs sed -i 's|https://rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "rallly.co" | xargs sed -i 's|"rallly.co"|"SCTG"|g'
+RUN sed -i 's|process.env.NEXT_PUBLIC_SELF_HOSTED === "true" ? "standalone" : undefined|"standalone"|' apps/web/next.config.js
 RUN cd packages/proize && npm install --force && npm run build && cd -
 RUN turbo prune --scope=@rallly/web --docker
 

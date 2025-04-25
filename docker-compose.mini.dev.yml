@@ -24,7 +24,7 @@ services:
   rallly_selfhosted:
     build:
       args:
-        - SELF_HOSTED=true
+        - SELF_HOSTED=false
       context: .
       dockerfile: ./apps/web/Dockerfile.sctg
     restart: always
@@ -35,6 +35,7 @@ services:
       - 3000:3000
     environment:
       - DATABASE_URL=postgres://postgres:postgres@rallly_db/rallly
+      - API_SECRET=abcdef1234567890abcdef1234567890
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
       - NEXT_PUBLIC_SELF_HOSTED=false
