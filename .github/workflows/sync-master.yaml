@@ -99,9 +99,13 @@ jobs:
         run: |
           OWNER="lukevella"
           REPO="rallly"
+          today_date=$(date +"%Y%m%d")
           latest_release=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest")
           release_name=$(echo "$latest_release" | grep -o '"name": *"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "release='$release_name-$(date --iso-8601)" >> $GITHUB_OUTPUT
+          # Format the release string properly for Docker tags (no quotes, proper format)
+          echo "release=${release_name}-${today_date}" >> $GITHUB_OUTPUT
+          # For debugging
+          echo "Generated tag: ${release_name}-${today_date}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
