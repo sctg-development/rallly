@@ -60,6 +60,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY --from=ismogroup/busybox:1.37.0-php-8.3-apache /busybox-1.37.0/_install/bin/busybox /bin/busybox
 RUN yarn global add prisma
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
@@ -68,7 +69,7 @@ RUN curl -L https://dl.min.io/client/mc/release/linux-$(dpkg --print-architectur
 USER nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-start.sh ./
-COPY --from=builder --chown=nextjs:nodejs /app/scripts/init-from-S3.sh ./
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/db-S3.sh ./
 COPY --from=builder --chown=nextjs:nodejs /app/packages/database/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/dist/*.* ./proize/
 COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/src/prisma/*.node ./proize/
