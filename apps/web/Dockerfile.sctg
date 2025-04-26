@@ -65,7 +65,7 @@ RUN yarn global add prisma
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-RUN curl -L https://dl.min.io/client/mc/release/linux-$(dpkg --print-architecture)/mc > /usr/local/bin/mc && chmod +x /usr/local/bin/mc && mkdir -p /app/.mc && chown -R nextjs:nodejs /app/.mc
+RUN curl -k -L https://dl.min.io/client/mc/release/linux-$(dpkg --print-architecture)/mc > /usr/local/bin/mc && chmod +x /usr/local/bin/mc && mkdir -p /app/.mc && chown -R nextjs:nodejs /app/.mc
 USER nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-start.sh ./
