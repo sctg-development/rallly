@@ -79,11 +79,7 @@ jobs:
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           sudo rm -rf /usr/local/lib/android
           df -h
-      - name: Show 100 most large packages
-        shell: bash
-        run: |
-          echo "Show 100 most large packages"
-          dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
+
       - name: Check out the repo
         uses: actions/checkout@v4
       - name: Set up QEMU
@@ -105,7 +101,7 @@ jobs:
           REPO="rallly"
           latest_release=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/releases/latest")
           release_name=$(echo "$latest_release" | grep -o '"name": *"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "release=$release_name" >> $GITHUB_OUTPUT
+          echo "release='$release_name-$(date --iso-8601)" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
