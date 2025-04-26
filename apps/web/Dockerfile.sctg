@@ -13,6 +13,8 @@ RUN cp assets/images/logo-sctg.svg apps/landing/public/logo.svg
 RUN cp assets/images/logo-sctg.png apps/web/public/logo.png
 RUN cp assets/images/logo-sctg.png apps/landing/public/logo.png
 RUN cp assets/images/logo-sctg.png packages/emails/src/previews/static/logo.png
+# Tools
+RUN sed -i 's|prisma migrate deploy|source /db-S3.sh\nprisma migrate deploy|' scripts/docker-start.sh
 #RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://support.rallly.co" | xargs sed -i 's|https://support\.rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://rallly.co" | xargs sed -i 's|https://rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "rallly.co" | xargs sed -i 's|"rallly.co"|"SCTG"|g'
@@ -52,17 +54,19 @@ RUN apt-get update \
   zlib1g \
   libgcc-s1 \
   curl \
+  postgresql-client \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
 RUN yarn global add prisma
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+RUN curl -L https://dl.min.io/client/mc/release/linux-$(dpkg --print-architecture)/mc > /usr/local/bin/mc && chmod +x /usr/local/bin/mc && mkdir -p /app/.mc && chown -R nextjs:nodejs /app/.mc
 USER nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/docker-start.sh ./
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/init-from-S3.sh ./
 COPY --from=builder --chown=nextjs:nodejs /app/packages/database/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/dist/*.* ./proize/
 COPY --from=builder --chown=nextjs:nodejs /app/packages/proize/src/prisma/*.node ./proize/

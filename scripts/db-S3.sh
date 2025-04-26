@@ -1,0 +1,180 @@
+#!/bin/bash
+# This script provides functions to backup and restore a PostgreSQL database to/from an S3 bucket.
+
+# Function to validate environment variables
+validate_env_vars() {
+    # Validate S3 variables
+    if [ -z "${S3_BUCKET}" ] || [ -z "${S3_ACCESS_KEY}" ] || [ -z "${S3_SECRET_KEY}" ] || [ -z "${S3_ENDPOINT}" ] || [ -z "${S3_PATH}" ]; then
+        echo "S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY, S3_ENDPOINT, S3_PATH are not set"
+        return 1
+    fi
+    
+    # Parse DATABASE_URL=postgres://postgres:postgres@rallly-postgresql/rallly 
+    if [ -z "${DATABASE_URL}" ]; then
+        echo "DATABASE_URL is not set"
+        return 1
+    fi
+    
+    if [[ "$DATABASE_URL" =~ postgres://([^:]+):([^@]+)@([^/]+)/([^ ]+) ]]; then
+        POSTGRES_USER=${BASH_REMATCH[1]}
+        POSTGRES_PASSWORD=${BASH_REMATCH[2]}
+        POSTGRES_HOST=${BASH_REMATCH[3]}
+        POSTGRES_DATABASE=${BASH_REMATCH[4]}
+    else
+        echo "DATABASE_URL is not in the correct format"
+        return 1
+    fi
+    
+    # Check if POSTGRES variables are set
+    if [ -z "${POSTGRES_USER}" ] || [ -z "${POSTGRES_PASSWORD}" ] || [ -z "${POSTGRES_DATABASE}" ] || [ -z "${POSTGRES_HOST}" ]; then
+        echo "Failed to extract PostgreSQL connection details"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Function to setup S3 client
+setup_s3_client() {
+    # Test if mc is installed
+    if [ -z "$(which mc)" ]; then
+        echo "Error: MinIO client 'mc' is not installed"
+        return 1
+    fi
+
+    # Test if mc alias s3backup exists
+    if [ -z "$(mc alias list | grep s3backup)" ]; then
+        echo "s3backup alias not found, creating..."
+        mc alias set s3backup ${S3_ENDPOINT} ${S3_ACCESS_KEY} ${S3_SECRET_KEY}
+    fi
+    
+    return 0
+}
+
+# Function to initialize database from S3
+init-from-s3() {
+    echo "Starting database restoration from S3..."
+    
+    # Validate environment variables
+    if ! validate_env_vars; then
+        echo "Environment validation failed, aborting restore"
+        return 1
+    fi
+    
+    # Setup S3 client
+    if ! setup_s3_client; then
+        echo "S3 client setup failed, aborting restore"
+        return 1
+    fi
+    
+    echo "Finding latest backup in s3backup/${S3_BUCKET}/${S3_PATH}..."
+    
+    # Find latest backup file in s3
+    LATEST_BACKUP=$(mc ls s3backup/${S3_BUCKET}/${S3_PATH} | sort -r | head -n 1 | awk '{print $6}')
+    
+    if [ -z "${LATEST_BACKUP}" ]; then
+        echo "No backup files found in specified S3 path"
+        return 1
+    fi
+    
+    echo "Found backup: ${LATEST_BACKUP}"
+    echo "Downloading backup file..."
+    
+    # Download the backup
+    mc cp s3backup/${S3_BUCKET}/${S3_PATH}/${LATEST_BACKUP} /tmp/backup.tar.xz
+    
+    # Uncompress backup in temporary directory
+    TEMP=$(mktemp -d)
+    echo "Extracting backup to ${TEMP}..."
+    tar -xvf /tmp/backup.tar.xz -C ${TEMP}
+    rm /tmp/backup.tar.xz
+    
+    # Restore database dump
+    if [ -f "${TEMP}/dump.sql" ]; then
+        echo "Restoring database dump to ${POSTGRES_HOST}/${POSTGRES_DATABASE}..."
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -f ${TEMP}/dump.sql
+        RESTORE_STATUS=$?
+        
+        # Clean up
+        rm -rf ${TEMP}
+        
+        if [ $RESTORE_STATUS -eq 0 ]; then
+            echo "Database restore completed successfully"
+            return 0
+        else
+            echo "Database restore failed with error code ${RESTORE_STATUS}"
+            return 1
+        fi
+    else
+        echo "No dump.sql file found in backup"
+        rm -rf ${TEMP}
+        return 1
+    fi
+}
+
+# Function to backup database to S3
+backup-to-s3() {
+    echo "Starting database backup to S3..."
+    
+    # Validate environment variables
+    if ! validate_env_vars; then
+        echo "Environment validation failed, aborting backup"
+        return 1
+    fi
+    
+    # Setup S3 client
+    if ! setup_s3_client; then
+        echo "S3 client setup failed, aborting backup"
+        return 1
+    fi
+    
+    # Create a timestamp for the backup filename
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    BACKUP_FILE="backup_${TIMESTAMP}.tar.xz"
+    TEMP=$(mktemp -d)
+    
+    echo "Creating database dump..."
+    # Create database dump
+    PGPASSWORD=${POSTGRES_PASSWORD} pg_dump -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} > ${TEMP}/dump.sql
+    
+    if [ $? -ne 0 ]; then
+        echo "Failed to create database dump"
+        rm -rf ${TEMP}
+        return 1
+    fi
+    
+    echo "Compressing database dump..."
+    # Compress the dump
+    tar -cJf /tmp/${BACKUP_FILE} -C ${TEMP} dump.sql
+    
+    if [ $? -ne 0 ]; then
+        echo "Failed to compress database dump"
+        rm -rf ${TEMP}
+        return 1
+    fi
+    
+    # Clean up dump file
+    rm -rf ${TEMP}
+    
+    echo "Uploading backup to S3..."
+    # Upload to S3
+    mc cp /tmp/${BACKUP_FILE} s3backup/${S3_BUCKET}/${S3_PATH}/${BACKUP_FILE}
+    UPLOAD_STATUS=$?
+    
+    # Clean up local backup
+    rm /tmp/${BACKUP_FILE}
+    
+    if [ $UPLOAD_STATUS -eq 0 ]; then
+        echo "Database backup completed successfully: ${BACKUP_FILE}"
+        echo "Backup location: s3backup/${S3_BUCKET}/${S3_PATH}/${BACKUP_FILE}"
+        return 0
+    else
+        echo "Failed to upload backup to S3"
+        return 1
+    fi
+}
+
+echo "Added S3 backup and restore functions"
+echo "Usage:"
+echo "  init-from-s3: Restore database from S3"
+echo "  backup-to-s3: Backup database to S3"
