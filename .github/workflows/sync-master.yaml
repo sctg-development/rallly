@@ -35,7 +35,7 @@ jobs:
 
   push_to_registry:
     needs: sync_with_upstream
-    if: needs.sync_with_upstream.outputs.has_new_commits
+    if: needs.sync_with_upstream.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
