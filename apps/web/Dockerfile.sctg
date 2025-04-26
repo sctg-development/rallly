@@ -53,19 +53,25 @@ FROM node:20-slim AS runner
 # (see https://www.prisma.io/docs/orm/reference/system-requirements)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
+  ca-certificates \
   openssl \
+  gnupg2 \
   zlib1g \
   libgcc-s1 \
   curl \
-  postgresql-client \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=ismogroup/busybox:1.37.0-php-8.3-apache /busybox-1.37.0/_install/bin/busybox /bin/busybox
+RUN curl -k -L https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - &&\
+    echo "deb https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list &&\
+    apt-get update &&\
+    apt-get install -y postgresql-client-17 &&\
+    rm -rf /var/lib/apt/lists/*
 RUN yarn global add prisma
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN adduser --system --uid 1001 nextjs --home /app --shell /bin/bash
 RUN curl -k -L https://dl.min.io/client/mc/release/linux-$(dpkg --print-architecture)/mc > /usr/local/bin/mc && chmod +x /usr/local/bin/mc && mkdir -p /app/.mc && chown -R nextjs:nodejs /app/.mc
 USER nextjs
 
