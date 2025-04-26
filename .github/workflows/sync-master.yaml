@@ -30,7 +30,7 @@ jobs:
           upstream_sync_branch: main
 
       - name: Check for new commits
-        if: steps.sync.outputs.has_new_commits
+        if: steps.sync.outputs.has_new_commits == 'true' 
         run: echo "There were new commits. Continue to build and push the image."
 
   push_to_registry:
