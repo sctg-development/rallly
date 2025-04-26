@@ -43,6 +43,24 @@ spec:
               value: "25"
             - name: API_SECRET
               value: {{ .Values.apiSecret | quote }}
+            - name: S3_BUCKET
+              value: {{ .Values.s3Bucket | quote }}
+            - name: S3_ENDPOINT
+              value: {{ .Values.s3Endpoint | quote }}
+            - name: S3_ACCESS_KEY
+              value: {{ .Values.s3AccessKey | quote }}
+            - name: S3_SECRET_KEY
+              value: {{ .Values.s3SecretKey | quote }}
+            - name: S3_REGION
+              value: {{ .Values.s3Region | quote}}
+            - name: S3_PATH
+              value: {{ .Values.s3Path | quote}}
+            - name: CRYPTOKEN
+              value: {{ .Values.s3Cryptoken  | quote}}
+            - name: RALLY_INIT_FROM_S3
+              value: {{ .Values.iInitFromS3 | quote }}
+            - name: S3_RAY_FILE
+              value: {{ .Values.s3RallykFile | quote }}
           resources:
             requests:
               memory: "256Mi"

@@ -8,6 +8,14 @@ secretPassword: "abcdef1234567890abcdef1234567890"
 supportEmail: "support@example.org"
 noReplyEmail: "no-reply@example.org"
 baseUrl: "https://rallly.demo:57176"
+s3Bucket: "master"
+s3Path: "rally-parapente"
+s3Endpoint: "https://s3.parapente.com"
+s3AccessKey: "akey"
+s3SecretKey: "Q0dszsdE1E="
+s3Region: "par"
+s3Cryptoken: ""
+initFromS3: "false"
 
 postgresql:
   auth:
