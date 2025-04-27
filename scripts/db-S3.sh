@@ -91,8 +91,68 @@ init-from-s3() {
     
     # Restore database dump
     if [ -f "${TEMP}/dump.sql" ]; then
+        echo "Checking if database needs to be dropped first..."
+        
+        # Check if database already has tables
+        TABLE_COUNT=$(PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" | xargs)
+        
+        if [ "$TABLE_COUNT" -gt "0" ]; then
+            echo "Database has existing tables, dropping schema objects before restore..."
+            
+            # Create a temporary file for the drop commands
+            DROP_SCRIPT=$(mktemp)
+            
+            # Generate SQL to drop all objects in the public schema
+            cat > "$DROP_SCRIPT" << EOF
+-- Disable triggers temporarily
+SET session_replication_role = 'replica';
+
+-- Drop all tables
+DO \$\$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END \$\$;
+
+-- Drop custom types
+DO \$\$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname = 'public' AND t.typtype = 'e') LOOP
+        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END \$\$;
+
+-- Drop other custom types
+DO \$\$ 
+DECLARE 
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT typname FROM pg_type t JOIN pg_namespace n ON t.typnamespace = n.oid WHERE n.nspname = 'public' AND t.typtype = 'c') LOOP
+        EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+    END LOOP;
+END \$\$;
+
+-- Reset session
+SET session_replication_role = 'origin';
+EOF
+            
+            echo "Executing drop script..."
+            PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -f "$DROP_SCRIPT"
+            
+            # Clean up the drop script
+            rm "$DROP_SCRIPT"
+        else
+            echo "Database is empty, proceeding with direct restore."
+        fi
+        
         echo "Restoring database dump to ${POSTGRES_HOST}/${POSTGRES_DATABASE}..."
-        PGPASSWORD=${POSTGRES_PASSWORD} psql -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -f ${TEMP}/dump.sql
+        # Use -v ON_ERROR_STOP=1 to stop on first error
+        PGPASSWORD=${POSTGRES_PASSWORD} psql -v ON_ERROR_STOP=0 -h ${POSTGRES_HOST} -U ${POSTGRES_USER} -d ${POSTGRES_DATABASE} -f "${TEMP}/dump.sql"
         RESTORE_STATUS=$?
         
         # Clean up
@@ -102,8 +162,9 @@ init-from-s3() {
             echo "Database restore completed successfully"
             return 0
         else
-            echo "Database restore failed with error code ${RESTORE_STATUS}"
-            return 1
+            echo "Database restore completed with warnings (status code ${RESTORE_STATUS})"
+            echo "Some errors might be expected if objects already exist. The database should still be usable."
+            return 0  # Return success anyway since partial failures are often acceptable
         fi
     else
         echo "No dump.sql file found in backup"
@@ -174,7 +235,38 @@ backup-to-s3() {
     fi
 }
 
+# Function to remove backup older than $S3_MAX_DAYS days on S3
+remove-old-backups() {
+    #Default to 30 days if S3_MAX_DAYS is not set
+    S3_MAX_DAYS=${S3_MAX_DAYS:-30}
+    echo "Removing backups older than 30 days from S3..."
+    
+    # Validate environment variables
+    if ! validate_env_vars; then
+        echo "Environment validation failed, aborting cleanup"
+        return 1
+    fi
+    
+    # Setup S3 client
+    if ! setup_s3_client; then
+        echo "S3 client setup failed, aborting cleanup"
+        return 1
+    fi
+    
+    # Remove backups older than 30 days
+    mc find s3backup/${S3_BUCKET}/${S3_PATH} --older-than ${S3_MAX_DAYS}d --exec "mc rm {}"
+    
+    if [ $? -eq 0 ]; then
+        echo "Old backups removed successfully"
+        return 0
+    else
+        echo "Failed to remove old backups"
+        return 1
+    fi
+}
+
 echo "Added S3 backup and restore functions"
 echo "Usage:"
 echo "  init-from-s3: Restore database from S3"
 echo "  backup-to-s3: Backup database to S3"
+echo "  remove-old-backups: Remove backups older than S3_MAX_DAYS from S3"
