@@ -69,8 +69,16 @@ init-from-s3() {
     
     echo "Finding latest backup in s3backup/${S3_BUCKET}/${S3_PATH}..."
     
-    # Find latest backup file in s3
-    LATEST_BACKUP=$(mc ls s3backup/${S3_BUCKET}/${S3_PATH} | sort -r | head -n 1 | awk '{print $6}')
+    # if S3_RALLY_FILE is set, use it as the backup file
+    if [ -n "${S3_RALLY_FILE}" ]; then
+        echo "Using specified backup file: ${S3_RALLY_FILE}"
+        LATEST_BACKUP=${S3_RALLY_FILE}
+    else
+        # Check if S3_PATH is set, if not use the default path
+        # Find latest backup file in s3
+        LATEST_BACKUP=$(mc ls s3backup/${S3_BUCKET}/${S3_PATH} | sort -r | head -n 1 | awk '{print $6}')
+    fi
+    
     
     if [ -z "${LATEST_BACKUP}" ]; then
         echo "No backup files found in specified S3 path"
