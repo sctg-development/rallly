@@ -7,6 +7,7 @@ updateStrategy: RollingUpdate
 secretPassword: "abcdef1234567890abcdef1234567890"
 supportEmail: "support@example.org"
 noReplyEmail: "no-reply@example.org"
+allowedEmails: "*@example.org,@example.com"
 baseUrl: "https://rallly.demo:57176"
 s3Bucket: "master"
 s3Path: "rally-parapente"
