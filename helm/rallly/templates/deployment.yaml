@@ -57,10 +57,10 @@ spec:
               value: {{ .Values.s3Path | quote}}
             - name: CRYPTOKEN
               value: {{ .Values.s3Cryptoken  | quote}}
-            - name: RALLY_INIT_FROM_S3
+            - name: INIT_FROM_S3
               value: {{ .Values.iInitFromS3 | quote }}
-            - name: S3_RAY_FILE
-              value: {{ .Values.s3RallykFile | quote }}
+            - name: S3_RALLY_FILE
+              value: {{ .Values.s3RallyFile | quote }}
           resources:
             requests:
               memory: "256Mi"

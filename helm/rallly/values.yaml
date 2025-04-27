@@ -15,6 +15,7 @@ s3AccessKey: "akey"
 s3SecretKey: "Q0dszsdE1E="
 s3Region: "par"
 s3Cryptoken: ""
+s3RallyFile: ""
 initFromS3: "false"
 
 postgresql:
