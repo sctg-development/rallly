@@ -18,7 +18,7 @@ RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "mailto:support@rallly.co" | xargs sed -i 's|"mailto:support@rallly.co"|"mailto:support@sctg.eu.org"|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "rallly.co" | xargs sed -i 's|"rallly.co"|"SCTG"|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "feedback@rallly.co" | xargs sed -i 's|feedback@rallly.co|feedback-rally@sctg.eu.org|g'
-RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://d39ixtfgglw55o.cloudfront.net/images/rallly-logo-mark.png" | xargs sed -i 's|"https://d39ixtfgglw55o.cloudfront.net/images/rallly-logo-mark.png"|absoluteUrl("/images/rallly-logo-mark.png")|g'
+RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "rallly-logo-mark.png" | xargs sed -i 's|"https://.*/images/rallly-logo-mark.png"|absoluteUrl("/images/rallly-logo-mark.png")|g'
 RUN sed -i 's|process.env.NEXT_PUBLIC_SELF_HOSTED === "true" ? "standalone" : undefined|"standalone"|' apps/web/next.config.js
 RUN cd packages/proize && npm install --force && npm run build && cd -
 RUN turbo prune --scope=@rallly/web --docker
