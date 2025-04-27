@@ -13,22 +13,6 @@ RUN cp assets/images/logo-sctg.svg apps/landing/public/logo.svg
 RUN cp assets/images/logo-sctg.png apps/web/public/logo.png
 RUN cp assets/images/logo-sctg.png apps/landing/public/logo.png
 RUN cp assets/images/logo-sctg.png packages/emails/src/previews/static/logo.png
-# Tools
-# Tools
-RUN sed -i 's|#!/bin/sh|#!/bin/bash|' scripts/docker-start.sh
-# Write the modification to a file, then use cat to replace the content - more reliable than complex sed
-RUN echo '. /app/db-S3.sh' > /tmp/insert.txt && \
-    echo 'if [ "$INIT_FROM_S3" = "1" ] || [ "$INIT_FROM_S3" = "true" ]; then' >> /tmp/insert.txt && \
-    echo '  echo "Initializing database from S3..."' >> /tmp/insert.txt && \
-    echo '  init-from-s3' >> /tmp/insert.txt && \
-    echo '  if [ $? -ne 0 ]; then' >> /tmp/insert.txt && \
-    echo '    echo "Warning: Failed to initialize from S3, continuing anyway..."' >> /tmp/insert.txt && \
-    echo '  fi' >> /tmp/insert.txt && \
-    echo 'fi' >> /tmp/insert.txt && \
-    echo 'prisma migrate deploy' >> /tmp/insert.txt
-
-
-RUN sed -i -e '/prisma migrate deploy/r /tmp/insert.txt' -e '/prisma migrate deploy/d' scripts/docker-start.sh
 #RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://support.rallly.co" | xargs sed -i 's|https://support\.rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "https://rallly.co" | xargs sed -i 's|https://rallly\.co|https://sctg.eu.org|g'
 RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.jsx" -o -name "*.json" -o -name "*.html" -o -name "*.md" \) | xargs grep -l "mailto:support@rallly.co" | xargs sed -i 's|"mailto:support@rallly.co"|"mailto:support@sctg.eu.org"|g'
@@ -37,6 +21,21 @@ RUN find . -type f \( -name "*.ts" -o -name "*.tsx" -o -name "*.js" -o -name "*.
 RUN sed -i 's|process.env.NEXT_PUBLIC_SELF_HOSTED === "true" ? "standalone" : undefined|"standalone"|' apps/web/next.config.js
 RUN cd packages/proize && npm install --force && npm run build && cd -
 RUN turbo prune --scope=@rallly/web --docker
+# Tools
+RUN sed -i 's|#!/bin/sh|#!/bin/bash|' scripts/docker-start.sh
+# Write the modification to a file, then use cat to replace the content - more reliable than complex sed
+RUN echo '. /app/db-S3.sh' > /tmp/insert.txt && \
+  echo 'if [ "$INIT_FROM_S3" = "1" ] || [ "$INIT_FROM_S3" = "true" ]; then' >> /tmp/insert.txt && \
+  echo '  echo "Initializing database from S3..."' >> /tmp/insert.txt && \
+  echo '  init-from-s3' >> /tmp/insert.txt && \
+  echo '  if [ $? -ne 0 ]; then' >> /tmp/insert.txt && \
+  echo '    echo "Warning: Failed to initialize from S3, continuing anyway..."' >> /tmp/insert.txt && \
+  echo '  fi' >> /tmp/insert.txt && \
+  echo 'fi' >> /tmp/insert.txt && \
+  echo 'prisma migrate deploy --schema=./prisma/schema.prisma' >> /tmp/insert.txt
+
+
+RUN sed -i -e '/prisma migrate deploy/r /tmp/insert.txt' -e '/prisma migrate deploy/d' scripts/docker-start.sh
 
 
 FROM node:20 AS installer
