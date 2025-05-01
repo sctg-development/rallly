@@ -66,6 +66,6 @@ spec:
             - name: CRYPTOKEN
               value: {{ .Values.s3Cryptoken  | quote}}
             - name: INIT_FROM_S3
-              value: {{ .Values.iInitFromS3 | quote }}
+              value: {{ .Values.initFromS3 | quote }}
             - name: S3_RALLY_FILE
               value: {{ .Values.s3RallyFile | quote }}
