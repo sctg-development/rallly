@@ -11,7 +11,7 @@ import {
 import { Form } from "@rallly/ui/form";
 import { useToast } from "@rallly/ui/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import React from "react";
+import type React from "react";
 import { useForm } from "react-hook-form";
 import useFormPersist from "react-hook-form-persist";
 import { useUnmount } from "react-use";
@@ -138,7 +138,7 @@ export const CreatePoll: React.FunctionComponent = () => {
           <PollSettingsForm />
           <hr />
           <Button
-            loading={createPoll.isLoading || createPoll.isSuccess}
+            loading={createPoll.isPending || createPoll.isSuccess}
             size="lg"
             type="submit"
             className="w-full"

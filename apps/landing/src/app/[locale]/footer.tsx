@@ -1,6 +1,5 @@
 "use client";
 
-import { DiscordIcon } from "@rallly/icons";
 import languages, { supportedLngs } from "@rallly/languages";
 import { Button } from "@rallly/ui/button";
 import {
@@ -10,17 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@rallly/ui/select";
-import {
-  GithubIcon,
-  LanguagesIcon,
-  LinkedinIcon,
-  TwitterIcon,
-} from "lucide-react";
+import { LanguagesIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import * as React from "react";
+import type * as React from "react";
 
+import DiscordIcon from "@/assets/discord.svg";
+import GithubIcon from "@/assets/github.svg";
+import LinkedinIcon from "@/assets/linkedin.svg";
+import TwitterIcon from "@/assets/twitter.svg";
 import { Trans } from "@/i18n/client/trans";
 import { useTranslation } from "@/i18n/client/use-translation";
 
@@ -101,34 +99,38 @@ export const Footer: React.FunctionComponent = () => {
             </div>
           </div>
           <div className="flex items-center space-x-6">
-            <Link
+            <a
               target="_blank"
               href="https://twitter.com/ralllyco"
               className="hover:text-primary-600 text-sm text-gray-500 hover:no-underline"
+              rel="noreferrer noopener"
             >
               <TwitterIcon className="size-5" />
-            </Link>
-            <Link
+            </a>
+            <a
               target="_blank"
               href="https://discord.gg/uzg4ZcHbuM"
               className="hover:text-primary-600 text-sm text-gray-500 hover:no-underline"
+              rel="noreferrer noopener"
             >
               <DiscordIcon className="size-5" />
-            </Link>
-            <Link
+            </a>
+            <a
               target="_blank"
               href="https://www.linkedin.com/company/rallly"
               className="hover:text-primary-600 text-sm text-gray-500 hover:no-underline"
+              rel="noreferrer noopener"
             >
               <LinkedinIcon className="size-5" />
-            </Link>
-            <Link
+            </a>
+            <a
               target="_blank"
               href="https://github.com/lukevella/rallly"
               className="hover:text-primary-600 text-sm text-gray-500 hover:no-underline"
+              rel="noreferrer noopener"
             >
               <GithubIcon className="size-5" />
-            </Link>
+            </a>
           </div>
         </div>
         <div className="lg:w-1/6">
@@ -257,13 +259,13 @@ export const Footer: React.FunctionComponent = () => {
           <div className="mb-4">
             <LanguageSelect />
           </div>
-          <Link
+          <a
             href="https://support.rallly.co/contribute/translations"
             className="hover:border-primary-600 hover:text-primary-600 inline-flex items-center rounded-md border px-3 py-2 text-xs text-gray-500"
           >
             <LanguagesIcon className="mr-2 size-5" />
             <Trans ns="common" i18nKey="volunteerTranslator" /> &rarr;
-          </Link>
+          </a>
         </div>
       </div>
       <div className="flex flex-col justify-between gap-x-8 gap-y-8 sm:flex-row sm:items-end sm:pb-8">
@@ -303,6 +305,7 @@ export const Footer: React.FunctionComponent = () => {
                 target="_blank"
                 href="https://vercel.com?utm_source=rallly&utm_campaign=oss"
                 className="inline-block text-white"
+                rel="noreferrer noopener"
               >
                 <Image
                   src="/static/images/partners/vercel-logotype-dark.svg"
@@ -317,6 +320,7 @@ export const Footer: React.FunctionComponent = () => {
                 target="_blank"
                 className="inline-block"
                 href="/partners/digitalocean"
+                rel="noreferrer noopener"
               >
                 <Image
                   src="/static/images/partners/digitalocean-logo.svg"
@@ -331,6 +335,7 @@ export const Footer: React.FunctionComponent = () => {
                 target="_blank"
                 className="inline-block"
                 href="https://sentry.io"
+                rel="noreferrer noopener"
               >
                 <Image
                   src="/static/images/partners/sentry.svg"

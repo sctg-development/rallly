@@ -1,53 +1,43 @@
 import type { VoteType } from "@rallly/database";
-import { IfNeedBeIcon, NoIcon, PendingIcon, YesIcon } from "@rallly/icons";
-import { cn } from "@rallly/ui";
-import * as React from "react";
+import React from "react";
 
-const VoteIcon: React.FunctionComponent<{
+import { IfNeedBeIcon } from "@/components/vote-icon/if-need-be-icon";
+import { NoIcon } from "@/components/vote-icon/no-icon";
+import { PendingIcon } from "@/components/vote-icon/pending-icon";
+import { YesIcon } from "@/components/vote-icon/yes-icon";
+import { cn } from "@rallly/ui";
+import { type VariantProps, cva } from "class-variance-authority";
+
+const iconVariants = cva("", {
+  variants: {
+    size: {
+      sm: "size-4",
+      md: "size-5",
+    },
+  },
+});
+
+type IconVariantProps = VariantProps<typeof iconVariants>;
+
+const VoteIcon = ({
+  type,
+  size = "md",
+  className,
+}: {
   type?: VoteType;
-  size?: "sm" | "md";
   className?: string;
-}> = ({ type, className, size = "md" }) => {
+} & IconVariantProps) => {
+  const iconClassName = iconVariants({ size });
   switch (type) {
     case "yes":
-      return (
-        <YesIcon
-          className={cn("text-green-500", className, {
-            "size-5": size === "md",
-            "h-3": size === "sm",
-          })}
-        />
-      );
-
+      return <YesIcon className={cn(iconClassName, className)} />;
     case "ifNeedBe":
-      return (
-        <IfNeedBeIcon
-          className={cn("text-amber-400", className, {
-            "size-5": size === "md",
-            "h-3": size === "sm",
-          })}
-        />
-      );
-
+      return <IfNeedBeIcon className={cn(iconClassName, className)} />;
     case "no":
-      return (
-        <NoIcon
-          className={cn("text-gray-400", className, {
-            "size-5": size === "md",
-            "h-3": size === "sm",
-          })}
-        />
-      );
+      return <NoIcon className={cn(iconClassName, className)} />;
 
     default:
-      return (
-        <PendingIcon
-          className={cn("text-gray-300", className, {
-            "size-5": size === "md",
-            "h-3": size === "sm",
-          })}
-        />
-      );
+      return <PendingIcon className={cn(iconClassName, className)} />;
   }
 };
 

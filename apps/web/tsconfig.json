@@ -6,7 +6,8 @@
       "@/*": ["src/*"]
     },
     "strictNullChecks": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "target": "ES2017"
   },
   "include": [
     "**/*.ts",

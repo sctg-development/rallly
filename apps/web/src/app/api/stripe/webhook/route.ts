@@ -1,14 +1,16 @@
 import type { Stripe } from "@rallly/billing";
 import { stripe } from "@rallly/billing";
-import { withPosthog } from "@rallly/posthog/server";
 import * as Sentry from "@sentry/nextjs";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+
+import { withPosthog } from "@/utils/posthog";
 
 import { getEventHandler } from "./handlers";
 
 export const POST = withPosthog(async (request: NextRequest) => {
   const body = await request.text();
+  // biome-ignore lint/style/noNonNullAssertion: Fix this later
   const sig = request.headers.get("stripe-signature")!;
   const stripeSigningSecret = process.env.STRIPE_SIGNING_SECRET;
 
@@ -27,7 +29,7 @@ export const POST = withPosthog(async (request: NextRequest) => {
   } catch (err) {
     Sentry.captureException(err);
     return NextResponse.json(
-      { error: `Webhook Error: Failed to construct event` },
+      { error: "Webhook Error: Failed to construct event" },
       { status: 400 },
     );
   }

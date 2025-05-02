@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "test:unit": "vitest run",
-    "lint": "eslint ./src",
     "type-check": "tsc --noEmit"
   },
   "exports": {
@@ -14,6 +13,8 @@
     "nanoid": "^5.0.9"
   },
   "devDependencies": {
+    "@rallly/tsconfig": "workspace:*",
+    "@types/node": "^18.19.41",
     "vitest": "^2.1.9"
   }
 }

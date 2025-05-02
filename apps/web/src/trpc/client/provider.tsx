@@ -6,7 +6,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { TRPCClientError, httpBatchLink } from "@trpc/client";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
 import superjson from "superjson";
@@ -25,7 +25,6 @@ export function TRPCProvider(props: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             retry: false,
-            cacheTime: Infinity,
             staleTime: 1000 * 60,
           },
         },
@@ -73,9 +72,9 @@ export function TRPCProvider(props: { children: React.ReactNode }) {
       links: [
         httpBatchLink({
           url: "/api/trpc",
+          transformer: superjson,
         }),
       ],
-      transformer: superjson,
     }),
   );
   return (

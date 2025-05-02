@@ -13,7 +13,6 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   output: "standalone",
   transpilePackages: [
-    "@rallly/icons",
     "@rallly/ui",
     "@rallly/tailwind-config",
     "@rallly/utils",
@@ -27,6 +26,14 @@ const nextConfig = {
     });
 
     return config;
+  },
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: ["@svgr/webpack"],
+        as: ".js",
+      },
+    },
   },
   typescript: {
     ignoreBuildErrors: true,

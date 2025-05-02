@@ -1,14 +1,17 @@
 import { prisma } from "@rallly/database";
-import { dehydrate, Hydrate } from "@tanstack/react-query";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
 
 import { PollLayout } from "@/components/layouts/poll-layout";
 import { createSSRHelper } from "@/trpc/server/create-ssr-helper";
 
-export default async function Layout({
-  children,
-  params,
-}: React.PropsWithChildren<{ params: { urlId: string } }>) {
+export default async function Layout(
+  props: React.PropsWithChildren<{ params: { urlId: string } }>,
+) {
+  const params = await props.params;
+
+  const { children } = props;
+
   const trpc = await createSSRHelper();
 
   // Prefetch all queries used in PollLayout
@@ -24,17 +27,16 @@ export default async function Layout({
   }
 
   return (
-    <Hydrate state={dehydrate(trpc.queryClient)}>
+    <HydrationBoundary state={dehydrate(trpc.queryClient)}>
       <PollLayout>{children}</PollLayout>
-    </Hydrate>
+    </HydrationBoundary>
   );
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { locale: string; urlId: string };
+export async function generateMetadata(props: {
+  params: Promise<{ locale: string; urlId: string }>;
 }) {
+  const params = await props.params;
   const poll = await prisma.poll.findUnique({
     where: { id: params.urlId },
     select: { title: true },

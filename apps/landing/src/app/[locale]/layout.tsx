@@ -1,4 +1,3 @@
-import "tailwindcss/tailwind.css";
 import "../../style.css";
 
 import languages from "@rallly/languages";
@@ -14,7 +13,7 @@ import {
 import { Icon } from "@rallly/ui/icon";
 import { Analytics } from "@vercel/analytics/react";
 import { MenuIcon } from "lucide-react";
-import { domAnimation, LazyMotion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
 import type { Viewport } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -37,13 +36,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default async function Root({
-  children,
-  params: { locale },
-}: {
+export default async function Root(props: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const params = await props.params;
+
+  const { locale } = params;
+
+  const { children } = props;
+
   const { t } = await getTranslation(locale, "common");
   return (
     <html lang={locale} className={sans.className}>

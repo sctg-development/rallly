@@ -128,7 +128,7 @@ const DesktopPoll: React.FunctionComponent = () => {
 
   const isOverflowing = useIsOverflowing(scrollRef);
 
-  const { x } = useScroll(scrollRef);
+  const { x } = useScroll(scrollRef as React.RefObject<HTMLElement>);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -311,6 +311,7 @@ const DesktopPoll: React.FunctionComponent = () => {
                         ? visibleParticipants.map((participant, i) => {
                             return (
                               <ParticipantRow
+                                // biome-ignore lint/suspicious/noArrayIndexKey: Fix this later
                                 key={i}
                                 participant={{
                                   id: participant.id,

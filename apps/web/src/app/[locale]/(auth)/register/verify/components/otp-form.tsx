@@ -10,8 +10,8 @@ import {
   FormItem,
   FormMessage,
 } from "@rallly/ui/form";
-import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -73,7 +73,7 @@ export function OTPForm({ token }: { token: string }) {
   const isLoading =
     form.formState.isSubmitting ||
     form.formState.isSubmitSuccessful ||
-    authenticateRegistration.isLoading;
+    authenticateRegistration.isPending;
 
   return (
     <Form {...form}>

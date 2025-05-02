@@ -52,6 +52,7 @@ const useScoreByOptionId = () => {
 
   return React.useMemo(() => {
     const scoreByOptionId: Record<string, OptionScore> = {};
+    // biome-ignore lint/complexity/noForEach: Fix this later
     options.forEach((option) => {
       scoreByOptionId[option.id] = {
         yes: [],
@@ -60,7 +61,9 @@ const useScoreByOptionId = () => {
       };
     });
 
+    // biome-ignore lint/complexity/noForEach: Fix this later
     responses?.forEach((response) => {
+      // biome-ignore lint/complexity/noForEach: Fix this later
       response.votes.forEach((vote) => {
         scoreByOptionId[vote.optionId]?.[vote.type].push(response.id);
       });
@@ -247,7 +250,7 @@ export function FinalizePollDialog(props: DialogProps) {
             </Button>
           </DialogClose>
           <Button
-            loading={scheduleEvent.isLoading}
+            loading={scheduleEvent.isPending}
             type="submit"
             form="finalize-form"
             variant="primary"

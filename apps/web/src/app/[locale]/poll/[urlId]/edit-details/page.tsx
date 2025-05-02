@@ -15,14 +15,14 @@ import { useForm } from "react-hook-form";
 
 import type { PollDetailsData } from "@/components/forms/poll-details-form";
 import { PollDetailsForm } from "@/components/forms/poll-details-form";
-import { useUpdatePollMutation } from "@/components/poll/mutations";
 import { usePoll } from "@/components/poll-context";
+import { useUpdatePollMutation } from "@/components/poll/mutations";
 import { Trans } from "@/components/trans";
 
 const Page = () => {
   const { poll } = usePoll();
   const urlId = poll.adminUrlId;
-  const { mutate: updatePollMutation, isLoading: isUpdating } =
+  const { mutate: updatePollMutation, isPending: isUpdating } =
     useUpdatePollMutation();
   const router = useRouter();
 

@@ -1,14 +1,13 @@
-import "tailwindcss/tailwind.css";
 import "../../style.css";
 
 import { defaultLocale, supportedLngs } from "@rallly/languages";
-import { PostHogProvider } from "@rallly/posthog/client";
+import { PostHogProvider, posthog } from "@rallly/posthog/client";
 import { Toaster } from "@rallly/ui/toaster";
 import { TooltipProvider } from "@rallly/ui/tooltip";
-import { domAnimation, LazyMotion } from "motion/react";
+import { LazyMotion, domAnimation } from "motion/react";
 import type { Viewport } from "next";
 import { Inter } from "next/font/google";
-import React from "react";
+import type React from "react";
 
 import { TimeZoneChangeDetector } from "@/app/[locale]/timezone-change-detector";
 import { UserProvider } from "@/components/user-provider";
@@ -40,7 +39,7 @@ export default async function Root({
 }) {
   const session = await auth();
 
-  let locale = getLocale();
+  let locale = await getLocale();
 
   const userId = await getUserId();
 
@@ -61,7 +60,7 @@ export default async function Root({
         <I18nProvider locale={locale}>
           <TRPCProvider>
             <LazyMotion features={domAnimation}>
-              <PostHogProvider>
+              <PostHogProvider client={posthog}>
                 <PostHogPageView />
                 <TooltipProvider>
                   <UserProvider

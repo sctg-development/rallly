@@ -1,6 +1,6 @@
 import { prisma } from "@rallly/database";
 import { absoluteUrl } from "@rallly/utils/absolute-url";
-import { dehydrate, Hydrate } from "@tanstack/react-query";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
 
 import { InvitePage } from "@/app/[locale]/invite/[urlId]/invite-page";
@@ -26,13 +26,12 @@ const PermissionContext = async ({
   );
 };
 
-export default async function Page({
-  params,
-  searchParams,
-}: {
-  params: { urlId: string };
-  searchParams: { token: string };
+export default async function Page(props: {
+  params: Promise<{ urlId: string }>;
+  searchParams: Promise<{ token: string }>;
 }) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const trpc = await createSSRHelper();
 
   const [poll] = await Promise.all([
@@ -46,24 +45,26 @@ export default async function Page({
   }
 
   return (
-    <Hydrate state={dehydrate(trpc.queryClient)}>
+    <HydrationBoundary state={dehydrate(trpc.queryClient)}>
       <Providers>
         <PermissionContext token={searchParams.token}>
           <InvitePage />
         </PermissionContext>
       </Providers>
-    </Hydrate>
+    </HydrationBoundary>
   );
 }
 
-export async function generateMetadata({
-  params: { urlId },
-}: {
-  params: {
+export async function generateMetadata(props: {
+  params: Promise<{
     urlId: string;
     locale: string;
-  };
+  }>;
 }) {
+  const params = await props.params;
+
+  const { urlId } = params;
+
   const poll = await prisma.poll.findUnique({
     where: {
       id: urlId as string,
