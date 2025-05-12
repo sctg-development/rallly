@@ -9,6 +9,12 @@
       "recommended": true,
       "style": {
         "noUselessElse": "off"
+      },
+      "correctness": {
+        "noUnusedImports": {
+          "level": "error",
+          "fix": "unsafe"
+        }
       }
     }
   },
