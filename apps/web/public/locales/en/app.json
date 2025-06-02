@@ -382,5 +382,9 @@
   "changeRole": "Change role",
   "licenseType": "License Type",
   "removeLicense": "Remove License",
-  "removeLicenseDescription": "Are you sure you want to remove this license?"
+  "removeLicenseDescription": "Are you sure you want to remove this license?",
+  "licenseKeyErrorRateLimitExceeded": "Rate limit exceeded",
+  "licenseKeyErrorInvalidLicenseKey": "Invalid license key",
+  "licenseKeyGenericError": "An error occurred while validating the license key",
+  "activate": "Activate"
 }

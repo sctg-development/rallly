@@ -14,7 +14,6 @@ import { kv } from "@vercel/kv";
 import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { bearerAuth } from "hono/bearer-auth";
-import { some } from "hono/combine";
 import { handle } from "hono/vercel";
 
 const isKvAvailable =
@@ -32,29 +31,20 @@ app.use("*", async (c, next) => {
 if (env.LICENSE_API_AUTH_TOKEN) {
   app.post(
     "/licenses",
+    rateLimiter({
+      windowMs: 60 * 60 * 1000,
+      limit: 10,
+      store: isKvAvailable
+        ? new RedisStore({
+            client: kv,
+          })
+        : undefined,
+    }),
     zValidator("json", createLicenseInputSchema),
-    some(
-      bearerAuth({ token: env.LICENSE_API_AUTH_TOKEN }),
-      rateLimiter({
-        windowMs: 60 * 60 * 1000,
-        limit: 10,
-        store: isKvAvailable
-          ? new RedisStore({
-              client: kv,
-            })
-          : undefined,
-      }),
-    ),
+    bearerAuth({ token: env.LICENSE_API_AUTH_TOKEN }),
     async (c) => {
-      const {
-        type,
-        seats,
-        expiresAt,
-        licenseeEmail,
-        licenseeName,
-        version,
-        stripeCustomerId,
-      } = c.req.valid("json");
+      const { type, seats, expiresAt, licenseeEmail, licenseeName, version } =
+        c.req.valid("json");
 
       try {
         const license = await prisma.license.create({
@@ -67,7 +57,6 @@ if (env.LICENSE_API_AUTH_TOKEN) {
             expiresAt,
             licenseeEmail,
             licenseeName,
-            stripeCustomerId,
           },
         });
         return c.json({
@@ -83,7 +72,6 @@ if (env.LICENSE_API_AUTH_TOKEN) {
 
 app.post(
   "/licenses/actions/validate-key",
-  zValidator("json", validateLicenseKeyInputSchema),
   rateLimiter({
     keyGenerator: async (c) => {
       const { key, fingerprint } = await c.req.json();
@@ -97,6 +85,7 @@ app.post(
         })
       : undefined,
   }),
+  zValidator("json", validateLicenseKeyInputSchema),
   async (c) => {
     const { key, fingerprint } = c.req.valid("json");
 
@@ -120,6 +109,10 @@ app.post(
 
     if (!license) {
       return c.json({ error: "License not found" }, 404);
+    }
+
+    if (license.status !== "ACTIVE") {
+      return c.json({ error: "License is not active" }, 400);
     }
 
     await prisma.licenseValidation.create({
