@@ -1,17 +1,22 @@
 import { PageIcon } from "@/app/components/page-icons";
-import {
-  PageContainer,
-  PageContent,
-  PageHeader,
-  PageTitle,
-} from "@/app/components/page-layout";
 import { requireAdmin } from "@/auth/queries";
+import {
+  FullWidthLayout,
+  FullWidthLayoutContent,
+  FullWidthLayoutHeader,
+  FullWidthLayoutTitle,
+} from "@/components/full-width-layout";
 import { Trans } from "@/components/trans";
 import { getLicense } from "@/features/licensing/queries";
 import { prisma } from "@rallly/database";
 import { cn } from "@rallly/ui";
 import { Tile, TileGrid, TileTitle } from "@rallly/ui/tile";
-import { GaugeIcon, KeySquareIcon, UsersIcon } from "lucide-react";
+import {
+  GaugeIcon,
+  KeySquareIcon,
+  SettingsIcon,
+  UsersIcon,
+} from "lucide-react";
 import Link from "next/link";
 
 async function loadData() {
@@ -32,21 +37,25 @@ async function loadData() {
 export default async function AdminPage() {
   const { userCount, userLimit, tier } = await loadData();
   return (
-    <PageContainer>
-      <PageHeader>
-        <PageTitle>
-          <PageIcon color="indigo">
-            <GaugeIcon />
-          </PageIcon>
+    <FullWidthLayout>
+      <FullWidthLayoutHeader>
+        <FullWidthLayoutTitle
+          icon={
+            <PageIcon size="sm" color="indigo">
+              <GaugeIcon />
+            </PageIcon>
+          }
+        >
           <Trans i18nKey="controlPanel" defaults="Control Panel" />
-        </PageTitle>
-      </PageHeader>
-      <PageContent className="space-y-8">
+        </FullWidthLayoutTitle>
+      </FullWidthLayoutHeader>
+      <FullWidthLayoutContent>
         <div className="space-y-4">
           <h2 className="text-muted-foreground text-sm">
             <Trans i18nKey="homeNavTitle" defaults="Navigation" />
           </h2>
           <TileGrid>
+            {/* USERS */}
             <Tile asChild>
               <Link href="/control-panel/users">
                 <div className="flex justify-between">
@@ -58,7 +67,7 @@ export default async function AdminPage() {
                       <Trans i18nKey="users" defaults="Users" />
                     </TileTitle>
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-muted-foreground text-sm">
                     <span
                       className={cn({
                         "text-destructive":
@@ -79,6 +88,7 @@ export default async function AdminPage() {
                 </div>
               </Link>
             </Tile>
+            {/* LICENSE */}
             <Tile asChild>
               <Link href="/control-panel/license">
                 <div className="flex justify-between">
@@ -86,7 +96,7 @@ export default async function AdminPage() {
                     <KeySquareIcon />
                   </PageIcon>
                   {tier ? (
-                    <span className="text-sm text-primary capitalize">
+                    <span className="text-primary text-sm capitalize">
                       {tier}
                     </span>
                   ) : (
@@ -100,10 +110,23 @@ export default async function AdminPage() {
                 </TileTitle>
               </Link>
             </Tile>
+            {/* INSTANCE SETTINGS */}
+            <Tile asChild>
+              <Link href="/control-panel/settings">
+                <div className="flex justify-between">
+                  <PageIcon color="darkGray">
+                    <SettingsIcon />
+                  </PageIcon>
+                </div>
+                <TileTitle>
+                  <Trans i18nKey="settings" defaults="Settings" />
+                </TileTitle>
+              </Link>
+            </Tile>
           </TileGrid>
         </div>
-      </PageContent>
-    </PageContainer>
+      </FullWidthLayoutContent>
+    </FullWidthLayout>
   );
 }
 

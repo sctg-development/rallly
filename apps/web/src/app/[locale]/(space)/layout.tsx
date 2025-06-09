@@ -1,4 +1,3 @@
-import { ActionBar } from "@rallly/ui/action-bar";
 import { Button } from "@rallly/ui/button";
 import { SidebarInset, SidebarTrigger } from "@rallly/ui/sidebar";
 import Link from "next/link";
@@ -49,9 +48,8 @@ export default async function Layout({
           </TopBar>
           <LicenseLimitWarning />
           <div className="flex flex-1 flex-col">
-            <div className="flex flex-1 flex-col p-4 md:p-8">{children}</div>
+            <div className="flex flex-1 flex-col">{children}</div>
           </div>
-          <ActionBar />
         </SidebarInset>
       </AppSidebarProvider>
     </TimezoneProvider>

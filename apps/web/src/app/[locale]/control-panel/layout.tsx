@@ -17,8 +17,8 @@ export default async function AdminLayout({
       <ControlPanelSidebar />
       <SidebarInset>
         <LicenseLimitWarning />
-        <div className="min-w-0 p-4 md:p-8 flex-1 flex-col flex">
-          {children}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex-1">{children}</div>
         </div>
       </SidebarInset>
     </ControlPanelSidebarProvider>

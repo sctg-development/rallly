@@ -95,7 +95,7 @@ const DesktopPoll: React.FunctionComponent = () => {
 
   const goToNextPage = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollLeft += 240;
+      scrollRef.current.scrollLeft += 235;
     }
   };
 
@@ -114,7 +114,7 @@ const DesktopPoll: React.FunctionComponent = () => {
 
   const goToPreviousPage = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollLeft -= 240;
+      scrollRef.current.scrollLeft -= 235;
     }
   };
   const { t } = useTranslation();
@@ -152,7 +152,7 @@ const DesktopPoll: React.FunctionComponent = () => {
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     disabled={x === 0}
                     onClick={goToPreviousPage}
                   >
@@ -169,7 +169,7 @@ const DesktopPoll: React.FunctionComponent = () => {
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     disabled={Boolean(
                       scrollRef.current &&
                         x + scrollRef.current.offsetWidth >=
@@ -195,7 +195,7 @@ const DesktopPoll: React.FunctionComponent = () => {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => {
                     collapse();
                   }}
@@ -214,7 +214,7 @@ const DesktopPoll: React.FunctionComponent = () => {
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => {
                     expand();
                   }}
@@ -241,7 +241,7 @@ const DesktopPoll: React.FunctionComponent = () => {
         <div
           className={cn(
             expanded
-              ? "fixed left-0 top-0 z-50 flex h-full w-full items-center justify-center bg-gray-900/25 p-8"
+              ? "fixed top-0 left-0 z-50 flex h-full w-full items-center justify-center bg-gray-900/25 p-8"
               : "",
           )}
         >
@@ -249,7 +249,7 @@ const DesktopPoll: React.FunctionComponent = () => {
             className={cn(
               "flex max-h-full flex-col overflow-hidden rounded-md bg-white",
               {
-                "shadow-huge w-full max-w-7xl": expanded,
+                "w-full max-w-7xl shadow-huge": expanded,
               },
             )}
             ref={containerRef}
@@ -263,7 +263,8 @@ const DesktopPoll: React.FunctionComponent = () => {
                 {canAddNewParticipant && mode !== "new" ? (
                   <Button
                     className="ml-2"
-                    size="sm"
+                    size="icon"
+                    variant="ghost"
                     data-testid="add-participant-button"
                     onClick={() => {
                       votingForm.newParticipant();
@@ -287,7 +288,7 @@ const DesktopPoll: React.FunctionComponent = () => {
                 <div
                   aria-hidden="true"
                   className={cn(
-                    "pointer-events-none absolute bottom-0 left-[240px] top-0 z-30 w-4 border-l bg-gradient-to-r from-gray-800/5 via-transparent to-transparent transition-opacity",
+                    "pointer-events-none absolute top-0 bottom-0 left-[235px] z-30 w-4 border-l bg-gradient-to-r from-gray-800/5 via-transparent to-transparent transition-opacity",
                     x > 0 ? "opacity-100" : "opacity-0",
                   )}
                 />
@@ -345,7 +346,7 @@ const DesktopPoll: React.FunctionComponent = () => {
                     </tbody>
                   </table>
                   {mode === "new" ? (
-                    <div className="sticky left-[240px] flex w-[calc(100%-240px)] items-center justify-between gap-4 border-l border-t bg-gray-50 p-3">
+                    <div className="sticky left-[235px] flex w-[calc(100%-235px)] items-center justify-between gap-4 border-t border-l bg-gray-50 p-3">
                       <Button
                         onClick={() => {
                           votingForm.cancel();

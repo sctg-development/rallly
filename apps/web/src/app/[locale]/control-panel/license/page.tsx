@@ -1,10 +1,4 @@
 import { PageIcon } from "@/app/components/page-icons";
-import {
-  PageContainer,
-  PageContent,
-  PageHeader,
-  PageTitle,
-} from "@/app/components/page-layout";
 import { requireAdmin } from "@/auth/queries";
 import {
   EmptyState,
@@ -13,6 +7,12 @@ import {
   EmptyStateIcon,
   EmptyStateTitle,
 } from "@/components/empty-state";
+import {
+  FullWidthLayout,
+  FullWidthLayoutContent,
+  FullWidthLayoutHeader,
+  FullWidthLayoutTitle,
+} from "@/components/full-width-layout";
 import { Trans } from "@/components/trans";
 import { LicenseKeyForm } from "@/features/licensing/components/license-key-form";
 import { RemoveLicenseButton } from "@/features/licensing/components/remove-license-button";
@@ -45,7 +45,7 @@ function DescriptionListTitle({
 }: {
   children: React.ReactNode;
 }) {
-  return <dt className="text-xs mb-1 text-muted-foreground">{children}</dt>;
+  return <dt className="mb-1 text-muted-foreground text-xs">{children}</dt>;
 }
 
 function DescriptionListValue({
@@ -53,22 +53,25 @@ function DescriptionListValue({
 }: {
   children: React.ReactNode;
 }) {
-  return <dd className="text-sm mb-4 font-mono">{children}</dd>;
+  return <dd className="mb-4 font-mono text-sm">{children}</dd>;
 }
 
 export default async function LicensePage() {
   const { license } = await loadData();
   return (
-    <PageContainer>
-      <PageHeader>
-        <PageTitle>
-          <PageIcon color="darkGray">
-            <KeySquareIcon />
-          </PageIcon>
+    <FullWidthLayout>
+      <FullWidthLayoutHeader>
+        <FullWidthLayoutTitle
+          icon={
+            <PageIcon size="sm" color="darkGray">
+              <KeySquareIcon />
+            </PageIcon>
+          }
+        >
           <Trans i18nKey="license" defaults="License" />
-        </PageTitle>
-      </PageHeader>
-      <PageContent>
+        </FullWidthLayoutTitle>
+      </FullWidthLayoutHeader>
+      <FullWidthLayoutContent>
         {license ? (
           <div>
             <DescriptionList>
@@ -76,22 +79,24 @@ export default async function LicensePage() {
                 <Trans i18nKey="licenseType" defaults="License Type" />
               </DescriptionListTitle>
               <DescriptionListValue>
-                <span className="capitalize text-primary">{license.type}</span>
-                <span className="text-muted-foreground ml-2">
-                  (
-                  <Trans
-                    i18nKey="seatCount"
-                    defaults="{count, plural, one {# seat} other {# seats}}"
-                    values={{ count: license.seats }}
-                  />
-                  )
-                </span>
+                <span className="text-primary capitalize">{license.type}</span>
+                {license.seats ? (
+                  <span className="ml-2 text-muted-foreground">
+                    (
+                    <Trans
+                      i18nKey="seatCount"
+                      defaults="{count, plural, one {# seat} other {# seats}}"
+                      values={{ count: license.seats }}
+                    />
+                    )
+                  </span>
+                ) : null}
               </DescriptionListValue>
               <DescriptionListTitle>
                 <Trans i18nKey="licenseKey" defaults="License Key" />
               </DescriptionListTitle>
               <DescriptionListValue>
-                <span className="font-mono select-all text-sm">
+                <span className="select-all font-mono text-sm">
                   {license.licenseKey}
                 </span>
               </DescriptionListValue>
@@ -137,7 +142,7 @@ export default async function LicensePage() {
                 <a
                   target="_blank"
                   rel="noreferrer"
-                  href="https://support.rallly.co/self-hosting/pricing"
+                  href="https://support.rallly.co/self-hosting/licensing"
                 >
                   <Icon>
                     <ShoppingBagIcon />
@@ -172,8 +177,8 @@ export default async function LicensePage() {
             </EmptyStateFooter>
           </EmptyState>
         )}
-      </PageContent>
-    </PageContainer>
+      </FullWidthLayoutContent>
+    </FullWidthLayout>
   );
 }
 
