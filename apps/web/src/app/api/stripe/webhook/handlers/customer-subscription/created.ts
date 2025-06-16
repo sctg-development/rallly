@@ -1,11 +1,12 @@
 import type { Stripe } from "@rallly/billing";
 import { prisma } from "@rallly/database";
 
+import { getSpace } from "@/features/spaces/queries";
+import { subscriptionMetadataSchema } from "@/features/subscription/schema";
 import {
   getExpandedSubscription,
   getSubscriptionDetails,
   isSubscriptionActive,
-  subscriptionMetadataSchema,
   toDate,
 } from "../utils";
 
@@ -21,7 +22,7 @@ export async function onCustomerSubscriptionCreated(event: Stripe.Event) {
   const res = subscriptionMetadataSchema.safeParse(subscription.metadata);
 
   if (!res.success) {
-    throw new Error("Missing user ID");
+    throw new Error("Invalid subscription metadata");
   }
 
   const userId = res.data.userId;
@@ -29,12 +30,24 @@ export async function onCustomerSubscriptionCreated(event: Stripe.Event) {
   // Check if user already has a subscription
   const existingUser = await prisma.user.findUnique({
     where: { id: userId },
-    include: { subscription: true },
+    select: {
+      subscription: true,
+    },
   });
 
   if (!existingUser) {
     throw new Error(`User with ID ${userId} not found`);
   }
+
+  const space = await getSpace({ id: res.data.spaceId });
+
+  if (space.ownerId !== userId) {
+    throw new Error(
+      `Space with ID ${res.data.spaceId} does not belong to user ${userId}`,
+    );
+  }
+
+  const spaceId = space.id;
 
   // If user already has a subscription, update it or replace it
   if (existingUser.subscription) {
@@ -53,30 +66,26 @@ export async function onCustomerSubscriptionCreated(event: Stripe.Event) {
         periodStart: toDate(subscription.current_period_start),
         periodEnd: toDate(subscription.current_period_end),
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        spaceId,
       },
     });
   } else {
     // Create a new subscription for the user
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
+    await prisma.subscription.create({
       data: {
-        subscription: {
-          create: {
-            id: subscription.id,
-            active: isActive,
-            priceId,
-            currency,
-            interval,
-            amount,
-            status: subscription.status,
-            createdAt: toDate(subscription.created),
-            periodStart: toDate(subscription.current_period_start),
-            periodEnd: toDate(subscription.current_period_end),
-            cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          },
-        },
+        id: subscription.id,
+        userId,
+        active: isActive,
+        priceId,
+        currency,
+        interval,
+        amount,
+        status: subscription.status,
+        createdAt: toDate(subscription.created),
+        periodStart: toDate(subscription.current_period_start),
+        periodEnd: toDate(subscription.current_period_end),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        spaceId,
       },
     });
   }

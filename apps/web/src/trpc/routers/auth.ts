@@ -133,6 +133,11 @@ export const auth = router({
           timeFormat: input.timeFormat,
           weekStart: input.weekStart,
           locale: input.locale,
+          spaces: {
+            create: {
+              name: "Personal",
+            },
+          },
         },
       });
 
@@ -148,6 +153,7 @@ export const auth = router({
         event: "register",
         distinctId: user.id,
         properties: {
+          method: "email",
           $set: {
             email: user.email,
             name: user.name,

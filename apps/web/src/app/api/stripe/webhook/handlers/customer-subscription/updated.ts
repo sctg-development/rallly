@@ -2,11 +2,11 @@ import type { Stripe } from "@rallly/billing";
 import { prisma } from "@rallly/database";
 import { posthog } from "@rallly/posthog/server";
 
+import { subscriptionMetadataSchema } from "@/features/subscription/schema";
 import {
   getExpandedSubscription,
   getSubscriptionDetails,
   isSubscriptionActive,
-  subscriptionMetadataSchema,
   toDate,
 } from "../utils";
 
@@ -26,7 +26,7 @@ export async function onCustomerSubscriptionUpdated(event: Stripe.Event) {
   const res = subscriptionMetadataSchema.safeParse(subscription.metadata);
 
   if (!res.success) {
-    throw new Error("Missing user ID");
+    throw new Error("Invalid subscription metadata");
   }
 
   // Update the subscription in the database
