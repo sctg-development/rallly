@@ -12,7 +12,7 @@ import { z } from "zod";
 import { moderateContent } from "@/features/moderation";
 import { getEmailClient } from "@/utils/emails";
 
-import { getActiveSpace } from "@/auth/queries";
+import { getDefaultSpace } from "@/features/spaces/queries";
 import { getTimeZoneAbbreviation } from "../../utils/date";
 import {
   createRateLimitMiddleware,
@@ -180,8 +180,12 @@ export const polls = router({
       const adminToken = nanoid();
       const participantUrlId = nanoid();
       const pollId = nanoid();
+      let spaceId: string | undefined;
 
-      const space = await getActiveSpace();
+      if (!ctx.user.isGuest) {
+        const space = await getDefaultSpace({ ownerId: ctx.user.id });
+        spaceId = space.id;
+      }
 
       const poll = await prisma.poll.create({
         select: {
@@ -231,7 +235,7 @@ export const polls = router({
           disableComments: input.disableComments,
           hideScores: input.hideScores,
           requireParticipantEmail: input.requireParticipantEmail,
-          spaceId: space?.id,
+          spaceId,
         },
       });
 
@@ -902,6 +906,7 @@ export const polls = router({
           hideParticipants: true,
           hideScores: true,
           disableComments: true,
+          spaceId: true,
           options: {
             select: {
               startTime: true,
@@ -925,6 +930,7 @@ export const polls = router({
           userId: ctx.user.id,
           timeZone: poll.timeZone,
           location: poll.location,
+          spaceId: poll.spaceId,
           description: poll.description,
           hideParticipants: poll.hideParticipants,
           hideScores: poll.hideScores,
