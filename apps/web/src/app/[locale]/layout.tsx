@@ -1,8 +1,8 @@
 import "../../style.css";
 
 import { supportedLngs } from "@rallly/languages";
-import { PostHogProvider, posthog } from "@rallly/posthog/client";
-import { Toaster } from "@rallly/ui/toaster";
+import { PostHogProvider } from "@rallly/posthog/client";
+import { Toaster } from "@rallly/ui/sonner";
 import { TooltipProvider } from "@rallly/ui/tooltip";
 import { LazyMotion, domAnimation } from "motion/react";
 import type { Viewport } from "next";
@@ -74,7 +74,7 @@ export default async function Root({
           <I18nProvider locale={locale}>
             <TRPCProvider>
               <LazyMotion features={domAnimation}>
-                <PostHogProvider client={posthog}>
+                <PostHogProvider>
                   <PostHogPageView />
                   <TooltipProvider>
                     <UserProvider

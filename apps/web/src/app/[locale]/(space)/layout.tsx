@@ -36,11 +36,11 @@ export default async function Layout({
                 className="rounded-full"
                 size="icon"
               >
-                <Link href="/settings/profile">
+                <Link href="/account/profile">
                   <OptimizedAvatarImage
                     src={user.image}
                     name={user.name}
-                    size="xs"
+                    size="sm"
                   />
                 </Link>
               </Button>
