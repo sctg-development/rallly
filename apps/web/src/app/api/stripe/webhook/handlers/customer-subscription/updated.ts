@@ -1,7 +1,7 @@
 import type { Stripe } from "@rallly/billing";
 import { prisma } from "@rallly/database";
-import { posthog } from "@rallly/posthog/server";
-
+import { waitUntil } from "@vercel/functions";
+import { PostHogClient } from "@/features/analytics/posthog";
 import { subscriptionMetadataSchema } from "@/features/subscription/schema";
 import {
   getExpandedSubscription,
@@ -29,32 +29,94 @@ export async function onCustomerSubscriptionUpdated(event: Stripe.Event) {
     throw new Error("Invalid subscription metadata");
   }
 
+  const { userId, spaceId } = res.data;
+
+  const tier = isActive ? "pro" : "hobby";
+
+  const subscriptionItem = subscription.items.data[0];
+
+  if (!subscriptionItem) {
+    throw new Error("Expected subscription to have one item");
+  }
+
+  const subscriptionItemId = subscriptionItem.id;
+  const quantity = subscriptionItem.quantity ?? 1;
+
   // Update the subscription in the database
-  await prisma.subscription.update({
-    where: {
-      id: subscription.id,
-    },
-    data: {
-      active: isActive,
-      priceId,
-      currency,
-      interval,
-      amount,
-      status: subscription.status,
-      periodStart: toDate(subscription.current_period_start),
-      periodEnd: toDate(subscription.current_period_end),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.upsert({
+      where: {
+        id: subscription.id,
+      },
+      update: {
+        active: isActive,
+        priceId,
+        currency,
+        interval,
+        subscriptionItemId,
+        quantity,
+        amount,
+        status: subscription.status,
+        periodStart: toDate(subscription.current_period_start),
+        periodEnd: toDate(subscription.current_period_end),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      },
+      create: {
+        id: subscription.id,
+        userId,
+        spaceId,
+        active: isActive,
+        priceId,
+        currency,
+        interval,
+        subscriptionItemId,
+        quantity,
+        amount,
+        status: subscription.status,
+        periodStart: toDate(subscription.current_period_start),
+        periodEnd: toDate(subscription.current_period_end),
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      },
+    });
+
+    await tx.space.update({
+      where: {
+        id: spaceId,
+      },
+      data: {
+        tier,
+      },
+    });
+  });
+
+  const posthog = PostHogClient();
+
+  posthog?.groupIdentify({
+    groupType: "space",
+    groupKey: spaceId,
+    properties: {
+      seatCount: quantity,
+      tier,
     },
   });
 
   posthog?.capture({
-    distinctId: res.data.userId,
-    event: "subscription change",
+    distinctId: userId,
+    uuid: event.id,
+    event: "subscription_update",
     properties: {
-      type: event.type,
+      interval,
+      quantity,
       $set: {
-        tier: isActive ? "pro" : "hobby",
+        tier,
       },
     },
+    groups: {
+      space: spaceId,
+    },
   });
+
+  if (posthog) {
+    waitUntil(posthog.shutdown());
+  }
 }

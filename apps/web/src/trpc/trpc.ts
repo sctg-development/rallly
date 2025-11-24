@@ -1,14 +1,13 @@
 import { prisma } from "@rallly/database";
-import { posthog } from "@rallly/posthog/server";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { Ratelimit } from "@upstash/ratelimit";
+import { waitUntil } from "@vercel/functions";
 import { kv } from "@vercel/kv";
 import superjson from "superjson";
-
+import { getCurrentUserSpace } from "@/auth/data";
+import { PostHogClient } from "@/features/analytics/posthog";
 import { isQuickCreateEnabled } from "@/features/quick-create";
 import { isSelfHosted } from "@/utils/constants";
-import { getSubscriptionStatus } from "@/utils/subscription";
-
 import type { TRPCContext } from "./context";
 
 const t = initTRPC.context<TRPCContext>().create({
@@ -20,11 +19,27 @@ const t = initTRPC.context<TRPCContext>().create({
 
 export const router = t.router;
 
-export const publicProcedure = t.procedure;
-
 export const middleware = t.middleware;
 
-export const possiblyPublicProcedure = t.procedure.use(
+export const procedureWithAnalytics = t.procedure.use(async ({ next }) => {
+  const posthog = PostHogClient();
+
+  const res = await next({
+    ctx: {
+      posthog,
+    },
+  });
+
+  if (posthog) {
+    waitUntil(posthog.shutdown());
+  }
+
+  return res;
+});
+
+export const publicProcedure = procedureWithAnalytics;
+
+export const possiblyPublicProcedure = procedureWithAnalytics.use(
   middleware(async ({ ctx, next }) => {
     // These procedurs are public if Quick Create is enabled
     const isGuest = !ctx.user || ctx.user.isGuest;
@@ -81,31 +96,33 @@ export const requireUserMiddleware = middleware(async ({ ctx, next }) => {
   });
 });
 
-export const privateProcedure = t.procedure.use(async ({ ctx, next }) => {
-  const { user } = ctx;
-  if (!user || user.isGuest !== false) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Login is required",
+export const privateProcedure = procedureWithAnalytics.use(
+  async ({ ctx, next }) => {
+    const { user } = ctx;
+    if (!user || user.isGuest !== false) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Login is required",
+      });
+    }
+
+    return next({
+      ctx: {
+        user,
+      },
     });
-  }
+  },
+);
 
-  return next({
-    ctx: {
-      user,
-    },
-  });
-});
-
-export const proProcedure = privateProcedure.use(async ({ ctx, next }) => {
+export const proProcedure = privateProcedure.use(async ({ next }) => {
   if (isSelfHosted) {
     // Self-hosted instances don't have paid subscriptions
     return next();
   }
 
-  const { active: isPro } = await getSubscriptionStatus(ctx.user.id);
+  const data = await getCurrentUserSpace();
 
-  if (!isPro) {
+  if (!data || data.space.tier !== "pro") {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message:
@@ -141,15 +158,6 @@ export const createRateLimitMiddleware = (
     const res = await ratelimit.limit(`${name}:${ctx.identifier}`);
 
     if (!res.success) {
-      posthog?.capture({
-        distinctId: ctx.user?.id ?? "system",
-        event: "ratelimit_exceeded",
-        properties: {
-          name,
-          requests,
-          duration,
-        },
-      });
       throw new TRPCError({
         code: "TOO_MANY_REQUESTS",
         message: "Too many requests",

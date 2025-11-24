@@ -4,125 +4,60 @@ import { prisma } from "@rallly/database";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
-import { createSpaceDTO } from "@/features/spaces/data";
-import { createUserDTO } from "@/features/user/data";
+import { createSpaceDTO } from "@/features/space/data";
+import { getUser } from "@/features/user/data";
+import { getSession } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { auth } from "@/next-auth";
+import { isInitialAdmin } from "@/utils/is-initial-admin";
 
+/**
+ * Gets the current user if they are logged in, otherwise null.
+ * @returns The current user if they are logged in, otherwise null.
+ */
 export const getCurrentUser = async () => {
-  const session = await auth();
+  const session = await getSession();
 
-  if (!session?.user) {
-    throw new AppError({
-      code: "UNAUTHORIZED",
-      message: "User not authenticated",
-    });
+  if (!session?.user || session.user.isGuest) {
+    return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: session.user.id,
-    },
-  });
+  const user = await getUser(session.user.id);
 
   if (!user) {
-    throw new AppError({
-      code: "NOT_FOUND",
-      message: "User not found",
-    });
+    return null;
   }
 
-  return createUserDTO(user);
+  return user;
 };
-
-export const loadCurrentUser = cache(async () => {
-  try {
-    return await getCurrentUser();
-  } catch (error) {
-    if (error instanceof AppError) {
-      switch (error.code) {
-        case "NOT_FOUND":
-          redirect("/api/auth/invalid-session");
-          break;
-        case "UNAUTHORIZED":
-          redirect("/login");
-          break;
-        default:
-          throw error;
-      }
-    }
-    throw error;
-  }
-});
 
 export const getCurrentUserSpace = async () => {
   const user = await getCurrentUser();
 
-  if (user.activeSpaceId) {
-    const space = await prisma.space.findUnique({
-      where: {
-        id: user.activeSpaceId,
-      },
-      select: {
-        id: true,
-        name: true,
-        ownerId: true,
-        subscription: {
-          select: {
-            active: true,
-          },
-        },
-        members: {
-          where: {
-            userId: user.id,
-          },
-          select: {
-            role: true,
-            userId: true,
-          },
-        },
-      },
-    });
-
-    if (!space) {
-      throw new AppError({
-        code: "NOT_FOUND",
-        message: "Space not found",
-      });
-    }
-
-    return {
-      user,
-      space: createSpaceDTO(user.id, space),
-    };
+  if (!user) {
+    return null;
   }
 
-  const space = await prisma.space.findFirst({
+  // Get the most recently selected space via SpaceMember
+  const spaceMember = await prisma.spaceMember.findFirst({
     where: {
-      ownerId: user.id,
+      userId: user.id,
     },
-    select: {
-      id: true,
-      name: true,
-      ownerId: true,
-      subscription: {
+    orderBy: {
+      lastSelectedAt: "desc",
+    },
+    include: {
+      space: {
         select: {
-          active: true,
-        },
-      },
-      members: {
-        where: {
-          userId: user.id,
-        },
-        select: {
-          role: true,
-          userId: true,
+          id: true,
+          name: true,
+          ownerId: true,
+          tier: true,
         },
       },
     },
   });
 
-  if (!space) {
+  if (!spaceMember) {
     throw new AppError({
       code: "NOT_FOUND",
       message: "Space not found",
@@ -131,101 +66,81 @@ export const getCurrentUserSpace = async () => {
 
   return {
     user,
-    space: createSpaceDTO(user.id, space),
+    space: createSpaceDTO({
+      id: spaceMember.space.id,
+      ownerId: spaceMember.space.ownerId,
+      name: spaceMember.space.name,
+      tier: spaceMember.space.tier,
+      role: spaceMember.role,
+    }),
   };
 };
 
-export const loadCurrentUserSpace = cache(async () => {
-  try {
-    return await getCurrentUserSpace();
-  } catch (error) {
-    if (error instanceof AppError) {
-      switch (error.code) {
-        case "NOT_FOUND":
-          redirect("/api/auth/invalid-session");
-          break;
-        case "UNAUTHORIZED":
-          redirect("/login");
-          break;
-        default:
-          throw error;
-      }
-    }
-    throw error;
-  }
-});
-
 export const requireAdmin = cache(async () => {
-  const user = await loadCurrentUser();
+  const user = await requireUser();
 
   if (user.role !== "admin") {
+    if (isInitialAdmin(user.email)) {
+      return redirect("/admin-setup");
+    }
+
     notFound();
   }
 });
 
-export const requireUser = async () => {
-  const session = await auth();
+export const requireUser = cache(async () => {
+  const session = await getSession();
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") ?? "/";
 
-  if (!session?.user) {
+  if (!session?.user || session.user.isGuest) {
     const searchParams = new URLSearchParams();
     searchParams.set("redirectTo", pathname);
     redirect(`/login?${searchParams.toString()}`);
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: session.user.id,
-    },
-  });
+  const user = await getUser(session.user.id);
 
   if (!user) {
     redirect("/api/auth/invalid-session");
   }
 
-  return createUserDTO(user);
-};
+  return user;
+});
 
-export const requireUserWithSpace = async () => {
+export const requireSpace = cache(async () => {
   const user = await requireUser();
 
-  if (user.activeSpaceId) {
-    const space = await prisma.space.findUnique({
-      where: {
-        id: user.activeSpaceId,
-      },
-      include: {
-        subscription: true,
-        members: true,
-      },
-    });
-
-    if (space) {
-      return {
-        user,
-        space: createSpaceDTO(user.id, space),
-      };
-    }
-    console.error("Could not find user's active space");
-  }
-
-  const space = await prisma.space.findFirst({
+  const spaceMember = await prisma.spaceMember.findFirst({
     where: {
-      ownerId: user.id,
+      userId: user.id,
+    },
+    orderBy: {
+      lastSelectedAt: "desc",
     },
     include: {
-      subscription: true,
-      members: true,
+      space: {
+        select: {
+          id: true,
+          ownerId: true,
+          name: true,
+          tier: true,
+          image: true,
+        },
+      },
     },
   });
 
-  if (!space) {
-    throw new AppError({
-      code: "NOT_FOUND",
-      message: "User does not own any spaces",
-    });
+  if (!spaceMember) {
+    redirect("/setup");
   }
 
-  return { user, space: createSpaceDTO(user.id, space) };
-};
+  return createSpaceDTO({
+    id: spaceMember.space.id,
+    ownerId: spaceMember.space.ownerId,
+    name: spaceMember.space.name,
+    tier: spaceMember.space.tier,
+    role: spaceMember.role,
+    image: spaceMember.space.image,
+  });
+});

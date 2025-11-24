@@ -28,28 +28,11 @@ async function createUser({
         create: {
           id: space.id,
           name: space.name,
+          tier: space.isPro ? "pro" : "hobby",
         },
       },
     },
   });
-
-  if (space.isPro) {
-    await prisma.subscription.create({
-      data: {
-        id: "sub-1",
-        spaceId: space.id,
-        userId: user.id,
-        active: true,
-        amount: 700,
-        currency: "USD",
-        interval: "month",
-        periodStart: new Date(),
-        periodEnd: dayjs().add(1, "month").toDate(),
-        priceId: "price_1M6ZJZGZJZJZJZJZJZJZJZJZ",
-        status: "active",
-      },
-    });
-  }
 
   await prisma.spaceMember.create({
     data: {
@@ -59,14 +42,114 @@ async function createUser({
     },
   });
 
-  await prisma.user.update({
-    where: { id },
+  return user;
+}
+
+async function createTeamSpace() {
+  console.info("Creating team space...");
+  
+  // Create team owner first
+  const teamOwner = await prisma.user.create({
     data: {
-      activeSpaceId: space.id,
+      id: "team-owner",
+      name: "Sarah Johnson",
+      email: "sarah@rallly.co",
+      timeZone: "America/New_York",
     },
   });
 
-  return user;
+  // Then create the team space
+  const teamSpace = await prisma.space.create({
+    data: {
+      id: "team-space-1",
+      name: "Acme Corp Team",
+      ownerId: teamOwner.id,
+      tier: "pro",
+    },
+  });
+
+  const teamMembers = await Promise.all([
+    prisma.user.create({
+      data: {
+        id: "team-admin",
+        name: "Michael Chen",
+        email: "michael@rallly.co",
+        timeZone: "America/Los_Angeles",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "team-member-1",
+        name: "Emily Rodriguez",
+        email: "emily@rallly.co",
+        timeZone: "America/Chicago",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "team-member-2",
+        name: "James Wilson",
+        email: "james@rallly.co",
+        timeZone: "Europe/London",
+      },
+    }),
+    prisma.user.create({
+      data: {
+        id: "team-member-3",
+        name: "Lisa Park",
+        email: "lisa@rallly.co",
+        timeZone: "Asia/Tokyo",
+      },
+    }),
+  ]);
+
+  // Add team members to space with different roles
+  await Promise.all([
+    prisma.spaceMember.create({
+      data: {
+        spaceId: teamSpace.id,
+        userId: teamOwner.id,
+        role: "ADMIN",
+        lastSelectedAt: new Date(),
+      },
+    }),
+    prisma.spaceMember.create({
+      data: {
+        spaceId: teamSpace.id,
+        userId: "team-admin",
+        role: "ADMIN",
+        lastSelectedAt: new Date(),
+      },
+    }),
+    prisma.spaceMember.create({
+      data: {
+        spaceId: teamSpace.id,
+        userId: "team-member-1",
+        role: "MEMBER",
+        lastSelectedAt: new Date(),
+      },
+    }),
+    prisma.spaceMember.create({
+      data: {
+        spaceId: teamSpace.id,
+        userId: "team-member-2",
+        role: "MEMBER",
+        lastSelectedAt: new Date(),
+      },
+    }),
+    prisma.spaceMember.create({
+      data: {
+        spaceId: teamSpace.id,
+        userId: "team-member-3",
+        role: "MEMBER",
+        lastSelectedAt: new Date(),
+      },
+    }),
+  ]);
+
+  console.info(`✓ Seeded team space with ${[teamOwner, ...teamMembers].length} members`);
+  
+  return [teamOwner, ...teamMembers];
 }
 
 export async function seedUsers() {
@@ -95,8 +178,11 @@ export async function seedUsers() {
     },
   });
 
+  // Create team space with multiple members
+  const teamMembers = await createTeamSpace();
+
   console.info(`✓ Seeded user ${freeUser.email}`);
   console.info(`✓ Seeded user ${proUser.email}`);
 
-  return [freeUser, proUser];
+  return [freeUser, proUser, ...teamMembers];
 }

@@ -1,12 +1,9 @@
 import type { Stripe } from "@rallly/billing";
 import { stripe } from "@rallly/billing";
 import { prisma } from "@rallly/database";
-import { posthog } from "@rallly/posthog/server";
-import { z } from "zod";
-
-const subscriptionMetadataSchema = z.object({
-  userId: z.string(),
-});
+import { waitUntil } from "@vercel/functions";
+import { PostHogClient } from "@/features/analytics/posthog";
+import { subscriptionMetadataSchema } from "@/features/subscription/schema";
 
 export async function onCustomerSubscriptionDeleted(event: Stripe.Event) {
   const subscription = await stripe.subscriptions.retrieve(
@@ -23,22 +20,59 @@ export async function onCustomerSubscriptionDeleted(event: Stripe.Event) {
     await stripe.invoices.voidInvoice(invoice.id);
   }
 
-  // delete the subscription from the database
-  await prisma.subscription.delete({
-    where: {
-      id: subscription.id,
+  const res = subscriptionMetadataSchema.safeParse(subscription.metadata);
+
+  if (!res.success) {
+    throw new Error("Invalid subscription metadata");
+  }
+
+  const { userId, spaceId } = res.data;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.subscription.update({
+      where: {
+        id: subscription.id,
+      },
+      data: {
+        active: false,
+        status: "canceled",
+      },
+    });
+
+    await tx.space.update({
+      where: {
+        id: spaceId,
+      },
+      data: {
+        tier: "hobby",
+      },
+    });
+  });
+
+  const posthog = PostHogClient();
+
+  posthog?.groupIdentify({
+    groupType: "space",
+    groupKey: spaceId,
+    properties: {
+      tier: "hobby",
     },
   });
 
-  const { userId } = subscriptionMetadataSchema.parse(subscription.metadata);
-
   posthog?.capture({
     distinctId: userId,
-    event: "subscription cancel",
+    event: "subscription_cancel",
     properties: {
       $set: {
         tier: "hobby",
       },
     },
+    groups: {
+      space: spaceId,
+    },
   });
+
+  if (posthog) {
+    waitUntil(posthog.shutdown());
+  }
 }

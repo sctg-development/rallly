@@ -32,7 +32,6 @@ const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "16rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
-const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -104,22 +103,6 @@ const SidebarProvider = React.forwardRef<
         ? setOpenMobile((open) => !open)
         : setOpen((open) => !open);
     }, [isMobile, setOpen]);
-
-    // Adds a keyboard shortcut to toggle the sidebar.
-    React.useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
-          event.preventDefault();
-          toggleSidebar();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [toggleSidebar]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
@@ -507,7 +490,7 @@ const SidebarMenu = React.forwardRef<
   <ul
     ref={ref}
     data-sidebar="menu"
-    className={cn("flex w-full min-w-0 flex-col gap-1.5", className)}
+    className={cn("flex w-full min-w-0 flex-col gap-1", className)}
     {...props}
   />
 ));
@@ -531,7 +514,8 @@ const sidebarMenuButtonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "text-primary data-[active=false]:hover:bg-primary-100",
+        primary:
+          "text-primary active:text-primary data-[active=false]:hover:bg-primary-100",
         default:
           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:text-sidebar-accent-foreground focus:bg-sidebar-accent focus:text-sidebar-accent-foreground focus-visible:text-sidebar-accent-foreground data-[active=false]:hover:bg-sidebar-accent/50",
         outline:

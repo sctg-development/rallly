@@ -34,6 +34,9 @@
           "level": "error",
           "fix": "safe"
         }
+      },
+      "a11y": {
+        "useAnchorContent": "off"
       }
     }
   },
@@ -63,10 +66,13 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "apps/**/src/**",
-      "packages/**/src/**",
-      "!**/apps/landing/public/static/scripts/mailerlite.js"
+    "includes": ["apps/**/src/**", "packages/**/src/**"],
+    "experimentalScannerIgnores": [
+      "dist",
+      "test-results",
+      ".next",
+      ".turbo",
+      "playwright-report"
     ]
   }
 }

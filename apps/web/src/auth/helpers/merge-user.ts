@@ -1,54 +1,26 @@
-import { accessibleBy } from "@casl/prisma";
 import { prisma } from "@rallly/database";
-import { posthog } from "@rallly/posthog/server";
 import * as Sentry from "@sentry/nextjs";
-import { defineAbilityFor } from "@/lib/ability-manager";
+import { waitUntil } from "@vercel/functions";
+import { PostHogClient } from "@/features/analytics/posthog";
 
 const getActiveSpaceForUser = async ({ userId }: { userId: string }) => {
-  const user = await prisma.user.findUnique({
+  const spaceMember = await prisma.spaceMember.findFirst({
     where: {
-      id: userId,
+      userId,
     },
-  });
-
-  if (!user) {
-    throw new Error(`User ${userId} not found`);
-  }
-
-  const ability = defineAbilityFor(user);
-
-  if (user.activeSpaceId) {
-    const space = await prisma.space.findFirst({
-      where: {
-        AND: [accessibleBy(ability).Space, { id: user.activeSpaceId }],
-      },
-    });
-
-    if (space) {
-      return space;
-    }
-  }
-
-  return await prisma.space.findFirst({
-    where: {
-      ownerId: user.id,
+    select: {
+      spaceId: true,
     },
     orderBy: {
-      createdAt: "asc",
+      lastSelectedAt: "desc",
     },
   });
+
+  return spaceMember?.spaceId;
 };
 
-export const mergeGuestsIntoUser = async (
-  userId: string,
-  guestIds: string[],
-) => {
-  const space = await getActiveSpaceForUser({ userId });
-  const guestId = guestIds[0];
-  if (!space || !guestId) {
-    console.error(`User ${userId} has no active space or default space`);
-    return;
-  }
+export const mergeGuestsIntoUser = async (userId: string, guestId: string) => {
+  const spaceId = await getActiveSpaceForUser({ userId });
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -60,7 +32,7 @@ export const mergeGuestsIntoUser = async (
           data: {
             guestId: null,
             userId: userId,
-            spaceId: space.id,
+            spaceId,
           },
         }),
 
@@ -85,11 +57,82 @@ export const mergeGuestsIntoUser = async (
         }),
       ]);
     });
+
+    const posthog = PostHogClient();
+
     posthog?.capture({
       distinctId: userId,
       event: "$merge_dangerously",
       properties: { alias: guestId },
     });
+
+    if (posthog) {
+      waitUntil(posthog.shutdown());
+    }
+  } catch (error) {
+    Sentry.captureException(error);
+  }
+};
+
+export const linkAnonymousUser = async (
+  authenticatedUserId: string,
+  anonymousUserId: string,
+) => {
+  const spaceId = await getActiveSpaceForUser({ userId: authenticatedUserId });
+
+  if (!spaceId) {
+    console.error(`User ${authenticatedUserId} has no active space`);
+    return;
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Transfer all data from anonymous user to authenticated user
+      await Promise.all([
+        // Transfer polls
+        tx.poll.updateMany({
+          where: {
+            userId: anonymousUserId,
+          },
+          data: {
+            userId: authenticatedUserId,
+            spaceId,
+          },
+        }),
+
+        // Transfer participants
+        tx.participant.updateMany({
+          where: {
+            userId: anonymousUserId,
+          },
+          data: {
+            userId: authenticatedUserId,
+          },
+        }),
+
+        // Transfer comments
+        tx.comment.updateMany({
+          where: {
+            userId: anonymousUserId,
+          },
+          data: {
+            userId: authenticatedUserId,
+          },
+        }),
+      ]);
+    });
+
+    const posthog = PostHogClient();
+    // Merge user identities in PostHog
+    posthog?.capture({
+      distinctId: authenticatedUserId,
+      event: "$merge_dangerously",
+      properties: { alias: anonymousUserId },
+    });
+
+    if (posthog) {
+      waitUntil(posthog.shutdown());
+    }
   } catch (error) {
     Sentry.captureException(error);
   }

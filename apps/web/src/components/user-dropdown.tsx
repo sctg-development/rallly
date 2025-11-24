@@ -1,4 +1,5 @@
 "use client";
+import { usePostHog } from "@rallly/posthog/client";
 import { cn } from "@rallly/ui";
 import { Button } from "@rallly/ui/button";
 import {
@@ -17,26 +18,29 @@ import {
   GemIcon,
   LifeBuoyIcon,
   ListIcon,
-  LogInIcon,
   LogOutIcon,
-  MegaphoneIcon,
   Settings2Icon,
   UserIcon,
-  UserPlusIcon,
 } from "lucide-react";
 import Link from "next/link";
-
-import { LoginLink } from "@/components/login-link";
 import { OptimizedAvatarImage } from "@/components/optimized-avatar-image";
-import { RegisterLink } from "@/components/register-link";
 import { Trans } from "@/components/trans";
 import { IfCloudHosted, IfSelfHosted } from "@/contexts/environment";
-import { isFeedbackEnabled } from "@/utils/constants";
+import { signOut } from "@/lib/auth-client";
 
-import { IfAuthenticated, IfGuest, useUser } from "./user-provider";
+export const UserDropdown = ({
+  name,
+  image,
+  email,
+  className,
+}: {
+  name: string;
+  image?: string;
+  email?: string;
+  className?: string;
+}) => {
+  const posthog = usePostHog();
 
-export const UserDropdown = ({ className }: { className?: string }) => {
-  const { user, logout } = useUser();
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger
@@ -45,12 +49,8 @@ export const UserDropdown = ({ className }: { className?: string }) => {
         className={cn("group min-w-0", className)}
       >
         <Button variant="ghost">
-          <OptimizedAvatarImage
-            src={user.image ?? undefined}
-            name={user.name}
-            size="sm"
-          />
-          <span className="truncate">{user.name}</span>
+          <OptimizedAvatarImage src={image} name={name} size="sm" />
+          <span className="truncate">{name}</span>
           <Icon>
             <ChevronDownIcon />
           </Icon>
@@ -59,10 +59,10 @@ export const UserDropdown = ({ className }: { className?: string }) => {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel className="flex items-center gap-2">
           <div className="grow">
-            <div>{user.isGuest ? <Trans i18nKey="guest" /> : user.name}</div>
-            {user.email ? (
+            <div className="font-medium text-foreground text-sm">{name}</div>
+            {email ? (
               <div className="font-normal text-muted-foreground text-xs">
-                {user.email}
+                {email}
               </div>
             ) : null}
           </div>
@@ -74,17 +74,15 @@ export const UserDropdown = ({ className }: { className?: string }) => {
             <Trans i18nKey="polls" defaults="Polls" />
           </Link>
         </DropdownMenuItem>
-        <IfAuthenticated>
-          <DropdownMenuItem asChild={true}>
-            <Link href="/account/profile" className="flex items-center gap-x-2">
-              <UserIcon className="size-4 text-muted-foreground" />
-              <Trans i18nKey="profile" defaults="Profile" />
-            </Link>
-          </DropdownMenuItem>
-        </IfAuthenticated>
+        <DropdownMenuItem asChild={true}>
+          <Link href="/settings/profile" className="flex items-center gap-x-2">
+            <UserIcon className="size-4 text-muted-foreground" />
+            <Trans i18nKey="profile" defaults="Profile" />
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem asChild={true}>
           <Link
-            href="/account/preferences"
+            href="/settings/preferences"
             className="flex items-center gap-x-2"
           >
             <Settings2Icon className="size-4 text-muted-foreground" />
@@ -93,7 +91,10 @@ export const UserDropdown = ({ className }: { className?: string }) => {
         </DropdownMenuItem>
         <IfCloudHosted>
           <DropdownMenuItem asChild={true}>
-            <Link href="/account/billing" className="flex items-center gap-x-2">
+            <Link
+              href="/settings/billing"
+              className="flex items-center gap-x-2"
+            >
               <CreditCardIcon className="size-4 text-muted-foreground" />
               <Trans i18nKey="Billing" defaults="Billing" />
             </Link>
@@ -124,44 +125,17 @@ export const UserDropdown = ({ className }: { className?: string }) => {
             </Link>
           </DropdownMenuItem>
         </IfSelfHosted>
-        {isFeedbackEnabled ? (
-          <DropdownMenuItem asChild={true}>
-            <Link
-              target="_blank"
-              href="https://feedback.rallly.co"
-              className="flex items-center gap-x-2"
-            >
-              <MegaphoneIcon className="size-4 text-muted-foreground" />
-              <Trans i18nKey="feedback" defaults="Feedback" />
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
         <DropdownMenuSeparator />
-        <IfGuest>
-          <DropdownMenuItem asChild={true}>
-            <LoginLink className="flex items-center gap-x-2">
-              <LogInIcon className="size-4 text-muted-foreground" />
-              <Trans i18nKey="login" defaults="login" />
-            </LoginLink>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild={true}>
-            <RegisterLink className="flex items-center gap-x-2">
-              <UserPlusIcon className="size-4 text-muted-foreground" />
-              <Trans i18nKey="createAnAccount" defaults="Register" />
-            </RegisterLink>
-          </DropdownMenuItem>
-        </IfGuest>
-        <IfAuthenticated>
-          <DropdownMenuItem
-            onClick={() => {
-              logout();
-            }}
-            className="flex items-center gap-x-2"
-          >
-            <LogOutIcon className="size-4 text-muted-foreground" />
-            <Trans i18nKey="logout" />
-          </DropdownMenuItem>
-        </IfAuthenticated>
+        <DropdownMenuItem
+          onClick={async () => {
+            await signOut();
+            posthog?.reset();
+          }}
+          className="flex items-center gap-x-2"
+        >
+          <LogOutIcon className="size-4 text-muted-foreground" />
+          <Trans i18nKey="logout" />
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

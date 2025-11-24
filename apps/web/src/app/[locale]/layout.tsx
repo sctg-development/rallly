@@ -1,24 +1,26 @@
 import "../../style.css";
 
-import { supportedLngs } from "@rallly/languages";
-import { PostHogProvider } from "@rallly/posthog/client";
+import { PostHogIdentify, PostHogProvider } from "@rallly/posthog/client";
 import { Toaster } from "@rallly/ui/sonner";
 import { TooltipProvider } from "@rallly/ui/tooltip";
 import { domAnimation, LazyMotion } from "motion/react";
-import type { Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { PublicEnvScript } from "next-runtime-env";
 import type React from "react";
 
 import { TimeZoneChangeDetector } from "@/app/[locale]/timezone-change-detector";
+import type { Params } from "@/app/[locale]/types";
+import { requireUser } from "@/auth/data";
 import { UserProvider } from "@/components/user-provider";
 import { PreferencesProvider } from "@/contexts/preferences";
-import { getUser } from "@/features/user/queries";
+import type { UserDTO } from "@/features/user/schema";
 import { I18nProvider } from "@/i18n/client";
-import { getLocale } from "@/i18n/server/get-locale";
+import { getSession } from "@/lib/auth";
 import { FeatureFlagsProvider } from "@/lib/feature-flags/client";
 import { featureFlagConfig } from "@/lib/feature-flags/config";
+import { LocaleSync } from "@/lib/locale/client";
 import { TimezoneProvider } from "@/lib/timezone/client/context";
-import { auth } from "@/next-auth";
 import { TRPCProvider } from "@/trpc/client/provider";
 import { ConnectedDayjsProvider } from "@/utils/dayjs";
 import { PostHogPageView } from "../posthog-page-view";
@@ -35,38 +37,45 @@ export const viewport: Viewport = {
 };
 
 async function loadData() {
-  const [session, locale] = await Promise.all([auth(), getLocale()]);
+  const [session] = await Promise.all([getSession()]);
 
-  const userId = session?.user?.email ? session.user.id : undefined;
-
-  const user = userId ? await getUser(userId) : null;
+  const user = session?.user
+    ? !session.user.isGuest
+      ? await requireUser()
+      : ({
+          id: session.user.id,
+          name: "Guest",
+          isGuest: true,
+          email: `${session.user.id}@rallly.co`,
+          role: "user",
+          locale: session.user.locale ?? undefined,
+          timeZone: session.user.timeZone ?? undefined,
+          timeFormat: session.user.timeFormat ?? undefined,
+          weekStart: session.user.weekStart ?? undefined,
+        } satisfies UserDTO)
+    : null;
 
   return {
     session,
-    locale,
     user,
   };
 }
 
 export default async function Root({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: Promise<Params>;
 }) {
-  const { session, locale: fallbackLocale, user } = await loadData();
-
-  let locale = fallbackLocale;
-
-  if (user?.locale) {
-    locale = user.locale;
-  }
-
-  if (!supportedLngs.includes(locale)) {
-    locale = fallbackLocale;
-  }
+  const { locale } = await params;
+  const { user } = await loadData();
 
   return (
     <html lang={locale} className={inter.className}>
+      <head>
+        <PublicEnvScript />
+      </head>
       <body>
         <FeatureFlagsProvider value={featureFlagConfig}>
           <Toaster />
@@ -74,32 +83,13 @@ export default async function Root({
             <TRPCProvider>
               <LazyMotion features={domAnimation}>
                 <PostHogProvider>
+                  <PostHogIdentify
+                    distinctId={user && !user.isGuest ? user.id : undefined}
+                  />
                   <PostHogPageView />
                   <TooltipProvider>
-                    <UserProvider
-                      user={
-                        user
-                          ? {
-                              id: user.id,
-                              name: user.name,
-                              email: user.email,
-                              tier: user
-                                ? user.isPro
-                                  ? "pro"
-                                  : "hobby"
-                                : "guest",
-                              image: user.image,
-                              role: user.role,
-                            }
-                          : session?.user
-                            ? {
-                                id: session.user.id,
-                                tier: "guest",
-                                role: "guest",
-                              }
-                            : undefined
-                      }
-                    >
+                    <UserProvider user={user ?? undefined}>
+                      <LocaleSync userLocale={user?.locale ?? locale} />
                       <PreferencesProvider
                         initialValue={{
                           timeFormat: user?.timeFormat,
@@ -124,4 +114,13 @@ export default async function Root({
       </body>
     </html>
   );
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: {
+      template: "%s | Rallly",
+      default: "Rallly",
+    },
+  };
 }

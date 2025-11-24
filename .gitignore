@@ -38,3 +38,5 @@ tsconfig.tsbuildinfo
 # Playwright
 playwright-report
 test-results
+.kiro
+.vercel

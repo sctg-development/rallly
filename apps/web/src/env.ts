@@ -1,5 +1,8 @@
 import { createEnv } from "@t3-oss/env-nextjs";
+import { env as runtimeEnv } from "next-runtime-env";
 import { z } from "zod";
+
+const vercelUrl = process.env.NEXT_PUBLIC_VERCEL_URL;
 
 export const env = createEnv({
   /*
@@ -7,11 +10,12 @@ export const env = createEnv({
    * Will throw if you access these variables on the client.
    */
   server: {
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
     NODE_ENV: z
       .enum(["development", "production", "test"])
       .default("development"),
     SECRET_PASSWORD: z.string().min(32),
+    API_SECRET: z.string().min(32).optional(),
     /**
      * OIDC Configuration
      */
@@ -35,8 +39,11 @@ export const env = createEnv({
     SMTP_HOST: z.string().optional(),
     SMTP_USER: z.string().optional(),
     SMTP_PWD: z.string().optional(),
-    SMTP_SECURE: z.string().optional(),
+    SMTP_SECURE: z.enum(["true", "false"]).optional(),
     SMTP_PORT: z.string().optional(),
+    SMTP_REJECT_UNAUTHORIZED: z.enum(["true", "false"]).optional(),
+    /** @deprecated Use SMTP_REJECT_UNAUTHORIZED instead */
+    SMTP_TLS_ENABLED: z.enum(["true", "false"]).optional(),
     /**
      * AWS SES Configuration
      */
@@ -50,11 +57,13 @@ export const env = createEnv({
      * Example: "user@example.com, *@example.com, *@*.example.com"
      */
     ALLOWED_EMAILS: z.string().optional(),
+    EMAIL_LOGIN_ENABLED: z.enum(["true", "false"]).default("true"),
+    REGISTRATION_ENABLED: z.enum(["true", "false"]).default("true"),
     /**
      * Email addresses for support and no-reply emails.
      */
-    SUPPORT_EMAIL: z.string().email(),
-    NOREPLY_EMAIL: z.string().email().optional(),
+    SUPPORT_EMAIL: z.email(),
+    NOREPLY_EMAIL: z.email().optional(),
     NOREPLY_EMAIL_NAME: z.string().default("Rallly"),
 
     /**
@@ -80,6 +89,19 @@ export const env = createEnv({
      */
     LICENSE_API_URL: z.string().optional(),
     LICENSE_API_AUTH_TOKEN: z.string().optional(),
+
+    /**
+     * Google Integration
+     */
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+    /**
+     * Microsoft Integration
+     */
+    MICROSOFT_TENANT_ID: z.string().optional().default("common"),
+    MICROSOFT_CLIENT_ID: z.string().optional(),
+    MICROSOFT_CLIENT_SECRET: z.string().optional(),
   },
   /*
    * Environment variables available on the client (and server).
@@ -87,8 +109,9 @@ export const env = createEnv({
    * You'll get type errors if these are not prefixed with NEXT_PUBLIC_.
    */
   client: {
+    NEXT_PUBLIC_BASE_URL: z.url(),
     NEXT_PUBLIC_POSTHOG_API_KEY: z.string().optional(),
-    NEXT_PUBLIC_POSTHOG_API_HOST: z.string().url().optional(),
+    NEXT_PUBLIC_POSTHOG_API_HOST: z.url().optional(),
     NEXT_PUBLIC_SELF_HOSTED: z.enum(["true", "false"]).optional(),
   },
   /*
@@ -101,6 +124,7 @@ export const env = createEnv({
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
     SECRET_PASSWORD: process.env.SECRET_PASSWORD,
+    API_SECRET: process.env.API_SECRET,
     OIDC_NAME: process.env.OIDC_NAME,
     OIDC_DISCOVERY_URL: process.env.OIDC_DISCOVERY_URL,
     OIDC_CLIENT_ID: process.env.OIDC_CLIENT_ID,
@@ -115,7 +139,11 @@ export const env = createEnv({
     SMTP_PWD: process.env.SMTP_PWD,
     SMTP_SECURE: process.env.SMTP_SECURE,
     SMTP_PORT: process.env.SMTP_PORT,
+    SMTP_REJECT_UNAUTHORIZED: process.env.SMTP_REJECT_UNAUTHORIZED,
+    SMTP_TLS_ENABLED: process.env.SMTP_TLS_ENABLED,
     ALLOWED_EMAILS: process.env.ALLOWED_EMAILS,
+    EMAIL_LOGIN_ENABLED: process.env.EMAIL_LOGIN_ENABLED,
+    REGISTRATION_ENABLED: process.env.REGISTRATION_ENABLED,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
     AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
     AWS_REGION: process.env.AWS_REGION,
@@ -124,9 +152,12 @@ export const env = createEnv({
     S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
     S3_REGION: process.env.S3_REGION,
-    NEXT_PUBLIC_POSTHOG_API_KEY: process.env.NEXT_PUBLIC_POSTHOG_API_KEY,
-    NEXT_PUBLIC_POSTHOG_API_HOST: process.env.NEXT_PUBLIC_POSTHOG_API_HOST,
-    NEXT_PUBLIC_SELF_HOSTED: process.env.NEXT_PUBLIC_SELF_HOSTED,
+    NEXT_PUBLIC_BASE_URL:
+      runtimeEnv("NEXT_PUBLIC_BASE_URL") ??
+      (vercelUrl ? `https://${vercelUrl}` : undefined),
+    NEXT_PUBLIC_POSTHOG_API_KEY: runtimeEnv("NEXT_PUBLIC_POSTHOG_API_KEY"),
+    NEXT_PUBLIC_POSTHOG_API_HOST: runtimeEnv("NEXT_PUBLIC_POSTHOG_API_HOST"),
+    NEXT_PUBLIC_SELF_HOSTED: runtimeEnv("NEXT_PUBLIC_SELF_HOSTED"),
     SUPPORT_EMAIL: process.env.SUPPORT_EMAIL,
     NOREPLY_EMAIL: process.env.NOREPLY_EMAIL,
     NOREPLY_EMAIL_NAME: process.env.NOREPLY_EMAIL_NAME,
@@ -134,6 +165,11 @@ export const env = createEnv({
     MODERATION_ENABLED: process.env.MODERATION_ENABLED,
     LICENSE_API_URL: process.env.LICENSE_API_URL,
     LICENSE_API_AUTH_TOKEN: process.env.LICENSE_API_AUTH_TOKEN,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID,
+    MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });

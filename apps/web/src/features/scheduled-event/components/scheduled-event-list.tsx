@@ -1,8 +1,19 @@
 "use client";
 
 import type { ScheduledEventStatus } from "@rallly/database";
+import { cn } from "@rallly/ui";
 import { Badge } from "@rallly/ui/badge";
 import { Button } from "@rallly/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  useDialog,
+} from "@rallly/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +21,9 @@ import {
   DropdownMenuTrigger,
 } from "@rallly/ui/dropdown-menu";
 import { Icon } from "@rallly/ui/icon";
-import { MoreHorizontalIcon, XIcon } from "lucide-react";
-import { ParticipantAvatarBar } from "@/components/participant-avatar-bar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@rallly/ui/tooltip";
+import { MoreHorizontalIcon } from "lucide-react";
+import { OptimizedAvatarImage } from "@/components/optimized-avatar-image";
 import { StackedList } from "@/components/stacked-list";
 import { Trans } from "@/components/trans";
 import { useSafeAction } from "@/lib/safe-action/client";
@@ -29,6 +41,7 @@ export function ScheduledEventListItem({
   invites,
   floating: isFloating,
   status,
+  createdBy,
 }: {
   eventId: string;
   title: string;
@@ -38,18 +51,66 @@ export function ScheduledEventListItem({
   allDay: boolean;
   invites: { id: string; inviteeName: string; inviteeImage?: string }[];
   floating: boolean;
+  createdBy: { name: string; image?: string };
 }) {
-  const cancelEvent = useSafeAction(cancelEventAction);
+  const dialog = useDialog();
+  const cancelEvent = useSafeAction(cancelEventAction, {
+    onSuccess: () => {
+      dialog.dismiss();
+    },
+  });
   return (
     <div className="flex w-full gap-6">
       <div className="flex flex-1 flex-col gap-y-1 lg:flex-row-reverse lg:justify-end lg:gap-x-4">
         <div className="flex items-center gap-4 text-sm">
-          <div>{title}</div>
-          {status === "canceled" && (
-            <Badge>
-              <Trans i18nKey="canceled" defaults="Canceled" />
-            </Badge>
-          )}
+          <div className="flex flex-1 items-center gap-2">
+            <div className="flex flex-col gap-1">
+              <div
+                className={cn("font-medium", {
+                  "line-through": status === "canceled",
+                })}
+              >
+                {title}
+              </div>
+              <div className="text-muted-foreground text-sm">
+                {invites.length > 0 ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help">
+                        <Trans
+                          i18nKey="attendeeCount"
+                          defaults="{count, plural, =0 {No attendees} one {1 attendee} other {# attendees}}"
+                          values={{ count: invites.length }}
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <ul>
+                        {invites.slice(0, 10).map((invite) => (
+                          <li key={invite.id}>{invite.inviteeName}</li>
+                        ))}
+                        {invites.length > 10 && (
+                          <li>
+                            <Trans
+                              i18nKey="moreParticipants"
+                              values={{ count: invites.length - 10 }}
+                              defaults="{count} more…"
+                            />
+                          </li>
+                        )}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <Trans
+                    i18nKey="attendeeCount"
+                    defaults="{count, plural, =0 {No attendees} one {1 attendee} other {# attendees}}"
+                    values={{ count: invites.length }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
         <div className="flex items-center whitespace-nowrap text-sm lg:min-w-40">
           <div>
@@ -83,17 +144,19 @@ export function ScheduledEventListItem({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div className="hidden sm:block">
-          <ParticipantAvatarBar
-            participants={invites.map((invite) => ({
-              id: invite.id,
-              name: invite.inviteeName,
-              image: invite.inviteeImage ?? undefined,
-            }))}
-            max={5}
-          />
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger>
+              <OptimizedAvatarImage
+                size="sm"
+                name={createdBy.name}
+                src={createdBy.image}
+              />
+            </TooltipTrigger>
+            <TooltipContent>{createdBy.name}</TooltipContent>
+          </Tooltip>
         </div>
-        {status !== "canceled" && (
+        {status !== "canceled" ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
@@ -104,21 +167,52 @@ export function ScheduledEventListItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onClick={() =>
-                  cancelEvent.executeAsync({
-                    eventId,
-                  })
-                }
+                variant="destructive"
+                onClick={() => dialog.trigger()}
               >
-                <Icon>
-                  <XIcon />
-                </Icon>
                 <Trans i18nKey="cancelEvent" defaults="Cancel Event" />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        ) : (
+          <Badge>
+            <Trans i18nKey="canceled" defaults="Canceled" />
+          </Badge>
         )}
       </div>
+      <Dialog {...dialog.dialogProps}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>
+              <Trans i18nKey="cancelEvent" defaults="Cancel Event" />
+            </DialogTitle>
+            <DialogDescription>
+              <Trans
+                i18nKey="cancelEventConfirmDescription"
+                defaults="Are you sure you want to cancel this event?"
+              />
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="default">
+                <Trans i18nKey="cancel" defaults="Cancel" />
+              </Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              loading={cancelEvent.isExecuting}
+              onClick={() =>
+                cancelEvent.executeAsync({
+                  eventId,
+                })
+              }
+            >
+              <Trans i18nKey="cancelEvent" defaults="Cancel Event" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { stripe } from "@rallly/billing";
 import { prisma } from "@rallly/database";
 import * as Sentry from "@sentry/nextjs";
-import { cookies } from "next/headers";
+import { waitUntil } from "@vercel/functions";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-import { auth } from "@/next-auth";
+import { PostHogClient } from "@/features/analytics/posthog";
+import { getSession } from "@/lib/auth";
 import { decryptToken } from "@/utils/session";
 
 type EmailChangePayload = {
@@ -13,23 +13,33 @@ type EmailChangePayload = {
   toEmail: string;
 };
 
-const COOKIE_CONFIG = {
-  path: "/",
-  httpOnly: false,
-  secure: false,
-  expires: new Date(Date.now() + 5 * 1000), // 5 seconds
-} as const;
+export const GET = async (request: NextRequest) => {
+  const token = request.nextUrl.searchParams.get("token");
 
-const setEmailChangeCookie = async (type: "success" | "error", value = "1") => {
-  (await cookies()).set(`email-change-${type}`, value, COOKIE_CONFIG);
-};
+  if (!token) {
+    return NextResponse.json({ error: "No token provided" }, { status: 400 });
+  }
 
-const handleEmailChange = async (token: string) => {
+  const session = await getSession();
+
+  if (!session?.user || session.user.isGuest) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirectTo", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
   const payload = await decryptToken<EmailChangePayload>(token);
 
   if (!payload) {
-    await setEmailChangeCookie("error", "invalidToken");
-    return false;
+    return NextResponse.redirect(
+      new URL("/settings/profile?error=invalidToken", request.url),
+    );
+  }
+
+  if (payload.userId !== session.user.id) {
+    return NextResponse.redirect(
+      new URL("/settings/profile?error=invalidUserId", request.url),
+    );
   }
 
   const user = await prisma.user.update({
@@ -50,27 +60,23 @@ const handleEmailChange = async (token: string) => {
     Sentry.captureException(error);
   }
 
-  await setEmailChangeCookie("success");
+  const posthog = PostHogClient();
 
-  return true;
-};
+  posthog?.capture({
+    event: "account_email_change_complete",
+    distinctId: session.user.id,
+    properties: {
+      $set: {
+        email: payload.toEmail,
+      },
+    },
+  });
 
-export const GET = async (request: NextRequest) => {
-  const token = request.nextUrl.searchParams.get("token");
-
-  if (!token) {
-    return NextResponse.json({ error: "No token provided" }, { status: 400 });
+  if (posthog) {
+    waitUntil(posthog.shutdown());
   }
 
-  const session = await auth();
-
-  if (!session?.user || !session.user.email) {
-    return NextResponse.redirect(
-      new URL(`/login?redirectTo=${request.url}`, request.url),
-    );
-  }
-
-  await handleEmailChange(token);
-
-  return NextResponse.redirect(new URL("/account/profile", request.url));
+  return NextResponse.redirect(
+    new URL("/settings/profile?emailChanged=true", request.url),
+  );
 };

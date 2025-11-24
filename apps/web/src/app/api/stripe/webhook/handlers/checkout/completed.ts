@@ -1,34 +1,10 @@
 import type { Stripe } from "@rallly/billing";
-import { stripe } from "@rallly/billing";
-import { posthog } from "@rallly/posthog/server";
+import { waitUntil } from "@vercel/functions";
 import { env } from "@/env";
+import { PostHogClient } from "@/features/analytics/posthog";
 import { licenseCheckoutMetadataSchema } from "@/features/licensing/schema";
 import { licenseManager } from "@/features/licensing/server";
-import { subscriptionCheckoutMetadataSchema } from "@/features/subscription/schema";
 import { getEmailClient } from "@/utils/emails";
-
-async function handleSubscriptionCheckoutSessionCompleted(
-  checkoutSession: Stripe.Checkout.Session,
-) {
-  const { userId } = subscriptionCheckoutMetadataSchema.parse(
-    checkoutSession.metadata,
-  );
-
-  const subscription = await stripe.subscriptions.retrieve(
-    checkoutSession.subscription as string,
-  );
-
-  posthog?.capture({
-    distinctId: userId,
-    event: "upgrade",
-    properties: {
-      interval: subscription.items.data[0].price.recurring?.interval,
-      $set: {
-        tier: "pro",
-      },
-    },
-  });
-}
 
 async function handleSelfHostedCheckoutSessionCompleted(
   checkoutSession: Stripe.Checkout.Session,
@@ -69,6 +45,8 @@ async function handleSelfHostedCheckoutSessionCompleted(
     seats,
   });
 
+  const posthog = PostHogClient();
+
   posthog?.capture({
     distinctId: email,
     event: "license_purchase",
@@ -81,6 +59,10 @@ async function handleSelfHostedCheckoutSessionCompleted(
       },
     },
   });
+
+  if (posthog) {
+    waitUntil(posthog.shutdown());
+  }
 
   if (!license || !license.data) {
     throw new Error(
@@ -109,7 +91,5 @@ export async function onCheckoutSessionCompleted(event: Stripe.Event) {
 
   if (checkoutSession.subscription === null) {
     await handleSelfHostedCheckoutSessionCompleted(checkoutSession);
-  } else {
-    await handleSubscriptionCheckoutSessionCompleted(checkoutSession);
   }
 }

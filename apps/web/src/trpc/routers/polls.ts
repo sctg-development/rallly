@@ -1,17 +1,19 @@
 import type { PollStatus } from "@rallly/database";
 import { prisma } from "@rallly/database";
-import { posthog } from "@rallly/posthog/server";
 import { absoluteUrl, shortUrl } from "@rallly/utils/absolute-url";
 import { nanoid } from "@rallly/utils/nanoid";
 import { TRPCError } from "@trpc/server";
 import dayjs from "dayjs";
-import * as ics from "ics";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getCurrentUserSpace } from "@/auth/data";
 import { moderateContent } from "@/features/moderation";
+import { getPolls } from "@/features/poll/data";
+import { canUserManagePoll } from "@/features/poll/helpers";
+import { hasPollAdminAccess } from "@/features/poll/query";
 import { formatEventDateTime } from "@/features/scheduled-event/utils";
 import { getEmailClient } from "@/utils/emails";
+import { createIcsEvent } from "@/utils/ics";
 import {
   createRateLimitMiddleware,
   possiblyPublicProcedure,
@@ -44,6 +46,39 @@ const getPollIdFromAdminUrlId = async (urlId: string) => {
 export const polls = router({
   participants,
   comments,
+  infiniteChronological: privateProcedure
+    .input(
+      z.object({
+        status: z.enum(["live", "paused", "finalized"]).optional(),
+        search: z.string().optional(),
+        member: z.string().optional(),
+        cursor: z.number().optional().default(1),
+        limit: z.number().default(20),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { cursor: page, limit: pageSize, status, search, member } = input;
+
+      const result = await getPolls({
+        status,
+        q: search,
+        member,
+        page,
+        pageSize,
+      });
+
+      let nextCursor: number | undefined;
+      if (result.hasNextPage) {
+        nextCursor = page + 1;
+      }
+
+      return {
+        polls: result.polls,
+        nextCursor,
+        hasNextPage: result.hasNextPage,
+        total: result.total,
+      };
+    }),
   getCountByStatus: privateProcedure.query(async ({ ctx }) => {
     const res = await prisma.poll.groupBy({
       by: ["status"],
@@ -64,6 +99,7 @@ export const polls = router({
       {} as Record<PollStatus, number>,
     );
   }),
+  /** @deprecated */
   infiniteList: privateProcedure
     .input(
       z.object({
@@ -76,7 +112,7 @@ export const polls = router({
       const { cursor, limit, status } = input;
       const polls = await prisma.poll.findMany({
         where: {
-          ...(ctx.user.isGuest
+          ...(ctx.user.isLegacyGuest
             ? { guestId: ctx.user.id }
             : { userId: ctx.user.id }),
           deletedAt: null,
@@ -135,8 +171,8 @@ export const polls = router({
       z.object({
         title: z.string().trim().min(1),
         timeZone: z.string().optional(),
-        location: z.string().optional(),
-        description: z.string().optional(),
+        location: z.string().trim().optional(),
+        description: z.string().trim().optional(),
         hideParticipants: z.boolean().optional(),
         hideScores: z.boolean().optional(),
         disableComments: z.boolean().optional(),
@@ -159,7 +195,7 @@ export const polls = router({
       ]);
 
       if (isFlaggedContent) {
-        posthog?.capture({
+        ctx.posthog?.capture({
           distinctId: ctx.user.id,
           event: "flagged_content",
           properties: {
@@ -175,21 +211,27 @@ export const polls = router({
       return next();
     })
     .mutation(async ({ ctx, input }) => {
+      const title = input.title;
+      const location = input.location || undefined;
+      const description = input.description || undefined;
       const adminToken = nanoid();
       const participantUrlId = nanoid();
       const pollId = nanoid();
       let spaceId: string | undefined;
 
       if (!ctx.user.isGuest) {
-        const { space } = await getCurrentUserSpace();
-        spaceId = space.id;
+        const data = await getCurrentUserSpace();
+        if (!data) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Space not found",
+          });
+        }
+        spaceId = data.space.id;
       }
 
       const poll = await prisma.poll.create({
-        select: {
-          adminUrlId: true,
-          id: true,
-          title: true,
+        include: {
           options: {
             select: {
               id: true,
@@ -198,13 +240,13 @@ export const polls = router({
         },
         data: {
           id: pollId,
-          title: input.title,
+          title,
           timeZone: input.timeZone,
-          location: input.location,
-          description: input.description,
+          location,
+          description,
           adminUrlId: adminToken,
           participantUrlId,
-          ...(ctx.user.isGuest
+          ...(ctx.user.isLegacyGuest
             ? { guestId: ctx.user.id }
             : { userId: ctx.user.id }),
           watchers: !ctx.user.isGuest
@@ -248,7 +290,7 @@ export const polls = router({
         });
 
         if (user) {
-          ctx.user.getEmailClient().queueTemplate("NewPollEmail", {
+          getEmailClient(ctx.user.locale).queueTemplate("NewPollEmail", {
             to: user.email,
             props: {
               title: poll.title,
@@ -260,6 +302,44 @@ export const polls = router({
         }
       }
 
+      ctx.posthog?.groupIdentify({
+        groupType: "poll",
+        groupKey: poll.id,
+        properties: {
+          name: poll.title,
+          status: poll.status,
+          is_guest: ctx.user.isGuest,
+          created_at: poll.createdAt,
+          participant_count: 0,
+          comment_count: 0,
+          option_count: poll.options.length,
+          has_location: !!location,
+          has_description: !!description,
+          timezone: input.timeZone,
+        },
+      });
+
+      ctx.posthog?.capture({
+        event: "poll_create",
+        distinctId: ctx.user.id,
+        properties: {
+          title: poll.title,
+          optionCount: poll.options.length,
+          hasLocation: !!location,
+          hasDescription: !!description,
+          timezone: input.timeZone,
+          disableCommnets: poll.disableComments,
+          hideParticipants: poll.hideParticipants,
+          hideScores: poll.hideScores,
+          requireParticipantEmail: poll.requireParticipantEmail,
+          isGuest: ctx.user.isGuest,
+        },
+        groups: {
+          poll: poll.id,
+          ...(poll.spaceId ? { space: poll.spaceId } : {}),
+        },
+      });
+
       revalidatePath("/", "layout");
 
       return { id: poll.id };
@@ -268,10 +348,10 @@ export const polls = router({
     .input(
       z.object({
         urlId: z.string(),
-        title: z.string().optional(),
+        title: z.string().trim().optional(),
         timeZone: z.string().optional(),
-        location: z.string().optional(),
-        description: z.string().optional(),
+        location: z.string().trim().optional(),
+        description: z.string().trim().optional(),
         optionsToDelete: z.string().array().optional(),
         optionsToAdd: z.string().array().optional(),
         hideParticipants: z.boolean().optional(),
@@ -281,7 +361,7 @@ export const polls = router({
       }),
     )
     .use(requireUserMiddleware)
-    .use(createRateLimitMiddleware("update_poll", 5, "1 m"))
+    .use(createRateLimitMiddleware("update_poll", 10, "1 m"))
     .use(async ({ ctx, input, next }) => {
       const isFlaggedContent = await moderateContent([
         input.title,
@@ -290,7 +370,7 @@ export const polls = router({
       ]);
 
       if (isFlaggedContent) {
-        posthog?.capture({
+        ctx.posthog?.capture({
           distinctId: ctx.user.id,
           event: "flagged_content",
           properties: {
@@ -305,7 +385,7 @@ export const polls = router({
 
       return next();
     })
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const pollId = await getPollIdFromAdminUrlId(input.urlId);
 
       if (input.optionsToDelete && input.optionsToDelete.length > 0) {
@@ -358,6 +438,99 @@ export const polls = router({
           requireParticipantEmail: input.requireParticipantEmail,
         },
       });
+
+      // Get updated poll data for group update
+      const updatedPoll = await prisma.poll.findUnique({
+        where: { id: pollId },
+        select: {
+          title: true,
+          status: true,
+          createdAt: true,
+          location: true,
+          description: true,
+          disableComments: true,
+          requireParticipantEmail: true,
+          hideParticipants: true,
+          hideScores: true,
+          timeZone: true,
+          _count: {
+            select: {
+              participants: {
+                where: { deleted: false },
+              },
+              comments: true,
+              options: true,
+            },
+          },
+        },
+      });
+
+      if (!updatedPoll) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+        });
+      }
+
+      // Track specific poll update events based on what was changed
+      const hasDetailsUpdate =
+        input.title !== undefined ||
+        input.location !== undefined ||
+        input.description !== undefined;
+      const hasOptionsUpdate =
+        (input.optionsToDelete && input.optionsToDelete.length > 0) ||
+        (input.optionsToAdd && input.optionsToAdd.length > 0);
+      const hasSettingsUpdate =
+        input.timeZone !== undefined ||
+        input.hideParticipants !== undefined ||
+        input.disableComments !== undefined ||
+        input.hideScores !== undefined ||
+        input.requireParticipantEmail !== undefined;
+
+      if (hasDetailsUpdate) {
+        ctx.posthog?.capture({
+          event: "poll_update_details",
+          distinctId: ctx.user.id,
+          properties: {
+            title: updatedPoll.title,
+            has_location: !!updatedPoll.location,
+            has_description: !!updatedPoll.description,
+            is_guest: ctx.user.isGuest,
+          },
+          groups: {
+            poll: pollId,
+          },
+        });
+      }
+
+      if (hasOptionsUpdate) {
+        ctx.posthog?.capture({
+          event: "poll_update_options",
+          distinctId: ctx.user.id,
+          properties: {
+            option_count: updatedPoll._count.options,
+          },
+          groups: {
+            poll: pollId,
+          },
+        });
+      }
+
+      if (hasSettingsUpdate) {
+        ctx.posthog?.capture({
+          event: "poll_update_settings",
+          distinctId: ctx.user.id,
+          properties: {
+            disable_comments: !!updatedPoll.disableComments,
+            hide_participants: !!updatedPoll.hideParticipants,
+            hide_scores: !!updatedPoll.hideScores,
+            require_participant_email: !!updatedPoll.requireParticipantEmail,
+          },
+          groups: {
+            poll: pollId,
+          },
+        });
+      }
+
       revalidatePath("/", "layout");
     }),
   delete: possiblyPublicProcedure
@@ -366,12 +539,23 @@ export const polls = router({
         urlId: z.string(),
       }),
     )
-    .mutation(async ({ input: { urlId } }) => {
+    .use(requireUserMiddleware)
+    .mutation(async ({ input: { urlId }, ctx }) => {
       const pollId = await getPollIdFromAdminUrlId(urlId);
       await prisma.poll.update({
         where: { id: pollId },
         data: { deleted: true, deletedAt: new Date() },
       });
+
+      // Track poll deletion analytics
+      ctx.posthog?.capture({
+        event: "poll_delete",
+        distinctId: ctx.user.id,
+        groups: {
+          poll: pollId,
+        },
+      });
+
       revalidatePath("/", "layout");
     }),
   // END LEGACY ROUTES
@@ -394,10 +578,31 @@ export const polls = router({
   watch: privateProcedure
     .input(z.object({ pollId: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to watch this poll",
+        });
+      }
+
       await prisma.watcher.create({
         data: {
           pollId: input.pollId,
           userId: ctx.user.id,
+        },
+      });
+
+      // Track poll watch analytics
+      ctx.posthog?.capture({
+        event: "poll_watch",
+        distinctId: ctx.user.id,
+        properties: {
+          is_guest: ctx.user.isGuest,
+        },
+        groups: {
+          poll: input.pollId,
         },
       });
     }),
@@ -418,6 +623,15 @@ export const polls = router({
         await prisma.watcher.delete({
           where: {
             id: watcher.id,
+          },
+        });
+
+        // Track poll unwatch analytics
+        ctx.posthog?.capture({
+          event: "poll_unwatch",
+          distinctId: ctx.user.id,
+          groups: {
+            poll: input.pollId,
           },
         });
       }
@@ -467,6 +681,7 @@ export const polls = router({
           userId: true,
           guestId: true,
           deleted: true,
+          spaceId: true,
           watchers: {
             select: {
               userId: true,
@@ -500,11 +715,9 @@ export const polls = router({
       }
       const inviteLink = shortUrl(`/invite/${res.id}`);
 
-      const userId = ctx.user?.id;
-
-      const isOwner = ctx.user?.isGuest
-        ? userId === res.guestId
-        : userId === res.userId;
+      const canManagePoll = ctx.user
+        ? await canUserManagePoll(ctx.user, res)
+        : false;
 
       const event = res.scheduledEvent
         ? {
@@ -529,7 +742,7 @@ export const polls = router({
           }
         : null;
 
-      if (isOwner || res.adminUrlId === input.adminToken) {
+      if (canManagePoll || res.adminUrlId === input.adminToken) {
         return {
           ...res,
           inviteLink,
@@ -548,6 +761,15 @@ export const polls = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to book a date for this poll",
+        });
+      }
+
       const poll = await prisma.poll.findUnique({
         where: {
           id: input.pollId,
@@ -639,12 +861,51 @@ export const polls = router({
         });
       }
 
+      const eventId = nanoid();
+      const uid = `${eventId}@rallly.co`;
+
+      const attendees = poll.participants.filter((p) =>
+        p.votes.some((v) => v.optionId === input.optionId && v.type !== "no"),
+      );
+
+      const icsAttendees = attendees
+        .filter((a) => !!a.email) // remove participants without email
+        .map((a) => ({
+          name: a.name,
+          email: a.email as string,
+        }));
+
+      const event = createIcsEvent({
+        uid,
+        sequence: 0,
+        title: poll.title,
+        location: poll.location ?? undefined,
+        description: poll.description ?? undefined,
+        start: option.startTime,
+        end:
+          option.duration > 0
+            ? dayjs(option.startTime).add(option.duration, "minute").toDate()
+            : dayjs(option.startTime).add(1, "day").toDate(),
+        allDay: option.duration === 0,
+        timeZone: poll.timeZone ?? undefined,
+        organizer: {
+          name: poll.user.name,
+          email: poll.user.email,
+        },
+        attendees: icsAttendees,
+      });
+
       const scheduledEvent = await prisma.$transaction(async (tx) => {
         // create scheduled event
         const event = await tx.scheduledEvent.create({
           data: {
+            id: eventId,
+            uid: `${eventId}@rallly.co`,
             start: eventStart.toDate(),
-            end: eventStart.add(option.duration, "minute").toDate(),
+            end:
+              option.duration > 0
+                ? eventStart.add(option.duration, "minute").toDate()
+                : eventStart.add(1, "day").toDate(),
             title: poll.title,
             location: poll.location,
             timeZone: poll.timeZone,
@@ -689,56 +950,6 @@ export const polls = router({
         });
 
         return event;
-      });
-
-      const attendees = poll.participants.filter((p) =>
-        p.votes.some((v) => v.optionId === input.optionId && v.type !== "no"),
-      );
-
-      const icsAttendees = attendees
-        .filter((a) => !!a.email) // remove participants without email
-        .map((a) => ({
-          name: a.name,
-          email: a.email ?? undefined,
-        }));
-
-      const utcStart = eventStart.utc();
-      const eventEnd =
-        option.duration > 0
-          ? eventStart.add(option.duration, "minutes")
-          : eventStart.add(1, "day");
-
-      const event = ics.createEvent({
-        uid: scheduledEvent.id,
-        sequence: 0, // TODO: Get sequence from database
-        title: poll.title,
-        location: poll.location ?? undefined,
-        description: poll.description ?? undefined,
-        organizer: {
-          name: poll.user.name,
-          email: poll.user.email,
-        },
-        attendees: icsAttendees,
-        ...(option.duration > 0
-          ? {
-              start: [
-                utcStart.year(),
-                utcStart.month() + 1,
-                utcStart.date(),
-                utcStart.hour(),
-                utcStart.minute(),
-              ],
-              startInputType: poll.timeZone ? "utc" : "local",
-              duration: { minutes: option.duration },
-            }
-          : {
-              start: [
-                eventStart.year(),
-                eventStart.month() + 1,
-                eventStart.date(),
-              ],
-              end: [eventEnd.year(), eventEnd.month() + 1, eventEnd.date()],
-            }),
       });
 
       if (event.error) {
@@ -794,7 +1005,7 @@ export const polls = router({
           timeZone: scheduledEvent.timeZone,
         });
 
-        ctx.user.getEmailClient().queueTemplate("FinalizeHostEmail", {
+        getEmailClient(ctx.user.locale).queueTemplate("FinalizeHostEmail", {
           to: poll.user.email,
           props: {
             name: poll.user.name,
@@ -813,7 +1024,11 @@ export const polls = router({
             dow,
             time,
           },
-          attachments: [{ filename: "event.ics", content: event.value }],
+          icalEvent: {
+            filename: "invite.ics",
+            method: "request",
+            content: event.value,
+          },
         });
 
         for (const p of participantsToEmail) {
@@ -842,28 +1057,38 @@ export const polls = router({
           );
         }
 
-        posthog?.capture({
+        ctx.posthog?.capture({
+          event: "poll_finalize",
           distinctId: ctx.user.id,
-          event: "finalize poll",
           properties: {
-            poll_id: poll.id,
-            poll_time_zone: poll.timeZone,
-            number_of_participants: poll.participants.length,
-            number_of_attendees: attendees.length,
+            attendee_count: attendees.length,
             days_since_created: dayjs().diff(poll.createdAt, "day"),
+            participant_count: poll.participants.length,
+          },
+          groups: {
+            poll: poll.id,
           },
         });
 
         revalidatePath("/", "layout");
       }
     }),
-  reopen: possiblyPublicProcedure
+  reopen: privateProcedure
     .input(
       z.object({
         pollId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to reopen this poll",
+        });
+      }
+
       await prisma.$transaction(async () => {
         const poll = await prisma.poll.update({
           where: {
@@ -882,6 +1107,15 @@ export const polls = router({
           });
         }
       });
+
+      ctx.posthog?.capture({
+        event: "poll_reopen",
+        distinctId: ctx.user.id,
+        groups: {
+          poll: input.pollId,
+        },
+      });
+
       revalidatePath("/", "layout");
     }),
   pause: possiblyPublicProcedure
@@ -890,13 +1124,31 @@ export const polls = router({
         pollId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .use(requireUserMiddleware)
+    .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to pause this poll",
+        });
+      }
+
       await prisma.poll.update({
         where: {
           id: input.pollId,
         },
         data: {
           status: "paused",
+        },
+      });
+
+      ctx.posthog?.capture({
+        event: "poll_pause",
+        distinctId: ctx.user.id,
+        groups: {
+          poll: input.pollId,
         },
       });
     }),
@@ -908,6 +1160,15 @@ export const polls = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to duplicate this poll",
+        });
+      }
+
       const poll = await prisma.poll.findUnique({
         where: {
           id: input.pollId,
@@ -969,13 +1230,32 @@ export const polls = router({
         pollId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .use(requireUserMiddleware)
+    .mutation(async ({ input, ctx }) => {
+      const hasAccess = await hasPollAdminAccess(input.pollId, ctx.user.id);
+
+      if (!hasAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to resume this poll",
+        });
+      }
+
       await prisma.poll.update({
         where: {
           id: input.pollId,
         },
         data: {
           status: "live",
+        },
+      });
+
+      // Track poll resume analytics
+      ctx.posthog?.capture({
+        event: "poll_resume",
+        distinctId: ctx.user.id,
+        groups: {
+          poll: input.pollId,
         },
       });
     }),
