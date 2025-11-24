@@ -1,5 +1,4 @@
 "use client";
-import { usePostHog } from "@rallly/posthog/client";
 import { cn } from "@rallly/ui";
 import { Badge } from "@rallly/ui/badge";
 import { Button } from "@rallly/ui/button";
@@ -58,17 +57,17 @@ function NewCommentForm({
   const { participants } = useParticipants();
 
   const authorName = React.useMemo(() => {
-    if (user.isGuest) {
+    if (user) {
+      if (!user.isGuest) {
+        return user.name;
+      }
       const participant = participants.find((p) => p.userId === user.id);
       return participant?.name ?? "";
-    } else {
-      return user.name;
     }
+    return "";
   }, [user, participants]);
 
   const pollId = poll.id;
-
-  const posthog = usePostHog();
 
   const { register, reset, control, handleSubmit, formState } =
     useForm<CommentForm>({
@@ -79,9 +78,6 @@ function NewCommentForm({
     });
 
   const addComment = trpc.polls.comments.add.useMutation({
-    onSuccess: () => {
-      posthog?.capture("created comment");
-    },
     onError: (error) => {
       toast.error(error.message);
     },
@@ -107,7 +103,7 @@ function NewCommentForm({
       </div>
       <div
         className={cn("mb-2", {
-          hidden: !user.isGuest,
+          hidden: user && !user.isGuest,
         })}
       >
         <Controller
@@ -154,7 +150,6 @@ function DiscussionInner() {
   const pollId = poll.id;
 
   const { data: comments } = trpc.polls.comments.list.useQuery({ pollId });
-  const posthog = usePostHog();
 
   const queryClient = trpc.useUtils();
 
@@ -166,9 +161,6 @@ function DiscussionInner() {
           return [...existingComments].filter(({ id }) => id !== commentId);
         },
       );
-    },
-    onSuccess: () => {
-      posthog?.capture("deleted comment");
     },
   });
 

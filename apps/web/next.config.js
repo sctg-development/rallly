@@ -20,6 +20,7 @@ const nextConfig = {
     "@rallly/posthog",
     "@rallly/emails",
   ],
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_URL,
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/,
@@ -57,19 +58,19 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: "/settings/profile",
-        destination: "/account/profile",
-        permanent: true,
+        source: "/api/auth/callback/oidc",
+        destination: "/api/better-auth/oauth2/callback/oidc",
+        permanent: false,
       },
       {
-        source: "/settings/preferences",
-        destination: "/account/preferences",
-        permanent: true,
+        source: "/api/auth/callback/google",
+        destination: "/api/better-auth/callback/google",
+        permanent: false,
       },
       {
-        source: "/settings/billing",
-        destination: "/account/billing",
-        permanent: true,
+        source: "/api/auth/callback/microsoft-entra-id",
+        destination: "/api/better-auth/callback/microsoft",
+        permanent: false,
       },
     ];
   },

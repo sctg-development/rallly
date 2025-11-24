@@ -5,13 +5,13 @@ import * as Sentry from "@sentry/nextjs";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { auth } from "@/next-auth";
+import { getSession } from "@/lib/auth";
 
 export function createStripePortalSessionHandler(path = "") {
   return async (request: NextRequest) => {
     const sessionId = request.nextUrl.searchParams.get("session_id");
     const returnPath =
-      request.nextUrl.searchParams.get("return_path") ?? "/account/billing";
+      request.nextUrl.searchParams.get("return_path") ?? "/settings/billing";
 
     let customerId: string | undefined;
 
@@ -34,7 +34,7 @@ export function createStripePortalSessionHandler(path = "") {
         );
       }
     } else {
-      const userSession = await auth();
+      const userSession = await getSession();
       if (!userSession?.user || userSession.user.email === null) {
         const url = new URL("/login", request.url);
         url.searchParams.set("redirectTo", request.nextUrl.pathname);

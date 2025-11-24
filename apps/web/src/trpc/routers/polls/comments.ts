@@ -1,10 +1,10 @@
 import { prisma } from "@rallly/database";
 import { absoluteUrl } from "@rallly/utils/absolute-url";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-
+import { hasPollAdminAccess } from "@/features/poll/query";
 import { getEmailClient } from "@/utils/emails";
 import { createToken } from "@/utils/session";
-
 import {
   createRateLimitMiddleware,
   publicProcedure,
@@ -33,7 +33,7 @@ export const comments = router({
         },
       });
 
-      const isOwner = ctx.user?.isGuest
+      const isOwner = ctx.user?.isLegacyGuest
         ? poll?.guestId === ctx.user.id
         : poll?.userId === ctx.user?.id;
 
@@ -49,7 +49,7 @@ export const comments = router({
           return await prisma.comment.findMany({
             where: {
               pollId,
-              ...(ctx.user.isGuest
+              ...(ctx.user.isLegacyGuest
                 ? { guestId: ctx.user.id }
                 : { userId: ctx.user.id }),
             },
@@ -72,22 +72,46 @@ export const comments = router({
       });
     }),
   add: publicProcedure
-    .use(createRateLimitMiddleware("add_comment", 5, "1 m"))
+    .use(createRateLimitMiddleware("add_comment", 10, "1 m"))
     .use(requireUserMiddleware)
     .input(
       z.object({
         pollId: z.string(),
-        authorName: z.string(),
-        content: z.string(),
+        authorName: z.string().trim().min(1),
+        content: z.string().trim().min(1),
       }),
     )
-    .mutation(async ({ ctx, input: { pollId, authorName, content } }) => {
+    .mutation(async ({ ctx, input }) => {
+      let authorName = input.authorName;
+
+      if (!ctx.user.isGuest) {
+        const user = await prisma.user.findUnique({
+          where: {
+            id: ctx.user.id,
+          },
+          select: {
+            name: true,
+          },
+        });
+
+        if (!user) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "User not found",
+          });
+        }
+
+        authorName = user.name;
+      }
+
+      const { content, pollId } = input;
+
       const newComment = await prisma.comment.create({
         data: {
           content,
           pollId,
           authorName,
-          ...(ctx.user.isGuest
+          ...(ctx.user.isLegacyGuest
             ? { guestId: ctx.user.id }
             : { userId: ctx.user.id }),
         },
@@ -147,6 +171,18 @@ export const comments = router({
         );
       }
 
+      // Track comment addition analytics
+      ctx.posthog?.capture({
+        distinctId: ctx.user.id,
+        event: "poll_comment_add",
+        properties: {
+          is_guest: ctx.user.isGuest,
+        },
+        groups: {
+          poll: pollId,
+        },
+      });
+
       return newComment;
     }),
   delete: publicProcedure
@@ -155,11 +191,48 @@ export const comments = router({
         commentId: z.string(),
       }),
     )
-    .mutation(async ({ input: { commentId } }) => {
+    .use(requireUserMiddleware)
+    .mutation(async ({ input: { commentId }, ctx }) => {
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        select: { pollId: true, userId: true, guestId: true },
+      });
+
+      if (!comment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Comment not found",
+        });
+      }
+
+      const isAuthor =
+        comment.userId === ctx.user.id || comment.guestId === ctx.user.id;
+
+      if (
+        !isAuthor &&
+        !(await hasPollAdminAccess(comment.pollId, ctx.user.id))
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to delete this comment",
+        });
+      }
+
       await prisma.comment.delete({
         where: {
           id: commentId,
         },
       });
+
+      // Track comment deletion analytics
+      if (comment) {
+        ctx.posthog?.capture({
+          distinctId: ctx.user.id,
+          event: "poll_comment_delete",
+          groups: {
+            poll: comment.pollId,
+          },
+        });
+      }
     }),
 });

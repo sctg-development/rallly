@@ -1,21 +1,20 @@
-import { usePostHog } from "@rallly/posthog/client";
 import { Button } from "@rallly/ui/button";
 import { Icon } from "@rallly/ui/icon";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@rallly/ui/tooltip";
 import { BellOffIcon, BellRingIcon } from "lucide-react";
-import { signIn } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
 import type * as React from "react";
-
 import { Skeleton } from "@/components/skeleton";
 import { Trans } from "@/components/trans";
 import { useUser } from "@/components/user-provider";
 import { useTranslation } from "@/i18n/client";
 import { trpc } from "@/trpc/client";
-
 import { usePoll } from "../poll-context";
 
 const NotificationsToggle: React.FunctionComponent = () => {
   const { poll } = usePoll();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const { data: watchers } = trpc.polls.getWatchers.useQuery(
     {
@@ -28,23 +27,16 @@ const NotificationsToggle: React.FunctionComponent = () => {
 
   const { user } = useUser();
 
-  const isWatching = watchers?.some(({ userId }) => userId === user.id);
-
-  const posthog = usePostHog();
+  const isWatching = watchers?.some(({ userId }) => userId === user?.id);
 
   const queryClient = trpc.useUtils();
 
   const watch = trpc.polls.watch.useMutation({
     onSuccess: () => {
-      // TODO (Luke Vella) [2023-04-08]: We should have a separate query for getting watchers
-      posthog?.capture("turned notifications on", {
-        pollId: poll.id,
-        source: "notifications-toggle",
-      });
       queryClient.polls.getWatchers.setData(
         { pollId: poll.id },
         (oldWatchers) => {
-          if (!oldWatchers || !user.id) {
+          if (!oldWatchers || !user) {
             return;
           }
           return [...oldWatchers, { userId: user.id }];
@@ -55,17 +47,13 @@ const NotificationsToggle: React.FunctionComponent = () => {
 
   const unwatch = trpc.polls.unwatch.useMutation({
     onSuccess: () => {
-      posthog?.capture("turned notifications off", {
-        pollId: poll.id,
-        source: "notifications-toggle",
-      });
       queryClient.polls.getWatchers.setData(
         { pollId: poll.id },
         (oldWatchers) => {
           if (!oldWatchers) {
             return;
           }
-          return oldWatchers.filter(({ userId }) => userId !== user.id);
+          return oldWatchers.filter(({ userId }) => userId !== user?.id);
         },
       );
     },
@@ -82,11 +70,10 @@ const NotificationsToggle: React.FunctionComponent = () => {
       <TooltipTrigger asChild>
         <Button
           data-testid="notifications-toggle"
-          disabled={user.isGuest}
           variant="ghost"
           onClick={async () => {
-            if (user.isGuest) {
-              signIn();
+            if (!user || user.isGuest) {
+              router.push(`/login?redirectTo=${encodeURIComponent(pathname)}`);
               return;
             }
             // toggle
@@ -109,7 +96,7 @@ const NotificationsToggle: React.FunctionComponent = () => {
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom">
-        {user.isGuest ? (
+        {!user || user.isGuest ? (
           <Trans
             i18nKey="notificationsGuestTooltip"
             defaults="Create an account or login to turn on notifications"

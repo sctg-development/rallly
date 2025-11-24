@@ -1,7 +1,7 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { BarChart2Icon, CalendarIcon, HomeIcon, UsersIcon } from "lucide-react";
+import { BarChart2Icon, CalendarIcon, HomeIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
 import React from "react";
 import { useTranslation } from "@/i18n/client";
@@ -65,23 +65,6 @@ export const useSpaceMenu = () => {
             },
           ],
         },
-        ...(process.env.NODE_ENV === "development"
-          ? [
-              {
-                id: "manage",
-                title: t("manage", { defaultValue: "Manage" }),
-                items: [
-                  {
-                    id: "members",
-                    label: t("members", { defaultValue: "Members" }),
-                    href: "/members",
-                    icon: UsersIcon,
-                    isActive: pathname === "/members",
-                  },
-                ],
-              },
-            ]
-          : []),
       ],
     }),
     [pathname, t],

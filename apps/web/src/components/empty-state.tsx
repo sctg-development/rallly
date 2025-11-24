@@ -11,7 +11,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center pt-16 pb-32 text-center",
+        "flex flex-col items-center justify-center py-16 text-center",
         className,
       )}
     >
@@ -22,8 +22,10 @@ export function EmptyState({
 
 export function EmptyStateIcon({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-4 inline-flex rounded-full border p-4">
-      <Icon size="xl">{children}</Icon>
+    <div className="mb-4 inline-flex rounded-full border bg-gradient-to-b from-gray-50 to-white p-4">
+      <Icon size="xl" className="opacity-50">
+        {children}
+      </Icon>
     </div>
   );
 }

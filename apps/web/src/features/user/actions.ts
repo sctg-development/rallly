@@ -63,7 +63,13 @@ export const deleteUserAction = adminActionClient
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { spaces: { include: { subscription: true } } },
+      include: {
+        subscriptions: {
+          select: {
+            active: true,
+          },
+        },
+      },
     });
 
     if (!user) {

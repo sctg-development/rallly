@@ -1,7 +1,10 @@
 "use client";
 
 import { cn } from "@rallly/ui";
+import { SidebarTrigger } from "@rallly/ui/sidebar";
 import { Skeleton } from "@rallly/ui/skeleton";
+import type { VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 
 export function PageContainer({
   children,
@@ -24,10 +27,11 @@ export function PageTitle({
   return (
     <h1
       className={cn(
-        "flex items-center gap-3 truncate font-bold text-foreground text-xl leading-none tracking-tight",
+        "flex items-center gap-3 truncate font-semibold text-foreground text-lg tracking-tight",
         className,
       )}
     >
+      <SidebarTrigger className="md:hidden" />
       {children}
     </h1>
   );
@@ -41,12 +45,7 @@ export function PageHeader({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between",
-        className,
-      )}
-    >
+    <div className={cn("flex items-start justify-between gap-4", className)}>
       {children}
     </div>
   );
@@ -76,14 +75,6 @@ export function PageHeaderActions({
   );
 }
 
-export function PageSection({ children }: { children?: React.ReactNode }) {
-  return <div className="space-y-4 md:space-y-6">{children}</div>;
-}
-
-export function PageSectionTitle({ children }: { children?: React.ReactNode }) {
-  return <h2 className="text-muted-foreground text-sm">{children}</h2>;
-}
-
 export function PageContent({
   children,
   className,
@@ -92,7 +83,7 @@ export function PageContent({
   className?: string;
 }) {
   return (
-    <div className={cn("mt-4 md:grow lg:mt-6", className)}>{children}</div>
+    <div className={cn("mt-4 md:mt-6 md:grow", className)}>{children}</div>
   );
 }
 
@@ -126,4 +117,90 @@ export function PageSkeleton() {
       </PageContent>
     </PageContainer>
   );
+}
+
+export function PageSectionGroup({ children }: { children?: React.ReactNode }) {
+  return <div className="space-y-6">{children}</div>;
+}
+
+const pageSectionVariants = cva("flex flex-col gap-4", {
+  variants: {
+    variant: {
+      card: "rounded-2xl border p-4",
+      default: "",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
+
+export const PageSectionDivider = () => <hr />;
+
+export function PageSection({
+  children,
+  className,
+  variant,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+} & VariantProps<typeof pageSectionVariants>) {
+  return (
+    <section className={cn(pageSectionVariants({ variant }), className)}>
+      {children}
+    </section>
+  );
+}
+
+export function PageSectionHeader({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn(className)}>{children}</div>;
+}
+
+export function PageSectionTitle({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <h2 className={cn("font-medium text-base text-foreground", className)}>
+      {children}
+    </h2>
+  );
+}
+
+export function PageSectionDescription({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      className={cn(
+        "mt-0.5 text-pretty text-muted-foreground text-sm leading-normal",
+        className,
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
+export function PageSectionContent({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("space-y-4", className)}>{children}</div>;
 }

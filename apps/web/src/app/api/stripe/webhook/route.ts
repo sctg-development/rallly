@@ -4,10 +4,9 @@ import * as Sentry from "@sentry/nextjs";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isSelfHosted } from "@/utils/constants";
-import { withPosthog } from "@/utils/posthog";
 import { getEventHandler } from "./handlers";
 
-export const POST = withPosthog(async (request: NextRequest) => {
+export const POST = async (request: NextRequest) => {
   if (isSelfHosted) {
     return NextResponse.json(
       { error: "This endpoint is not available on self-hosted instances" },
@@ -62,4 +61,4 @@ export const POST = withPosthog(async (request: NextRequest) => {
       { status: 400 },
     );
   }
-});
+};

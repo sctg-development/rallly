@@ -30,7 +30,6 @@
   "freeSchedulingPollTitle": "Znajdź datę swojego następnego wydarzenia",
   "freeSchedulingPollDescription": "Rallly pozwala tworzyć piękne i łatwe w użyciu ankiety do planowania, dzięki czemu można znaleźć najlepszy czas na następne wydarzenie.",
   "new": "Nowość",
-  "metaTitle": "Rallly - Zaplanuj spotkania grupowe",
   "metaDescription": "Twórz ankiety i głosuj, aby znaleźć najlepszy dzień lub godzinę. Bezpłatna alternatywa dla Doodle.",
   "when2meetAlternativeMetaTitle": "Najlepsza alternatywa dla When2Meet: Rallly",
   "when2meetAlternativeMetaDescription": "Znajdź lepszy sposób na planowanie spotkań z Rallly, najlepszą darmową alternatywą dla When2Meet. Łatwa w użyciu i darmowa.",
@@ -39,6 +38,5 @@
   "meetingPoll": "Twórz profesjonalne ankiety na spotkania z Rallly",
   "meetingPollDescription": "Ankiety spotkań to świetny sposób na uzyskanie dostępności ludzi. Rallly pozwala z łatwością tworzyć piękne ankiety spotkań.",
   "meetingPollMetaTitle": "Ankieta dotycząca spotkania",
-  "meetingPollMetaDescription": "Łatwo planuj spotkania dzięki naszej funkcji ankiet, zapewniając dostępność każdego uczestnika.",
-  "quickCreateBlog": "Wprowadzenie Szybkiego tworzenia"
+  "meetingPollMetaDescription": "Łatwo planuj spotkania dzięki naszej funkcji ankiet, zapewniając dostępność każdego uczestnika."
 }

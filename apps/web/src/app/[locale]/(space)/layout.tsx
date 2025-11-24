@@ -1,24 +1,10 @@
-import { Button } from "@rallly/ui/button";
-import { SidebarInset, SidebarTrigger } from "@rallly/ui/sidebar";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { loadCurrentUserSpace } from "@/auth/data";
-import { OptimizedAvatarImage } from "@/components/optimized-avatar-image";
-import { LicenseLimitWarning } from "@/features/licensing/components/license-limit-warning";
-import { CommandMenu } from "@/features/navigation/command-menu";
-import { isUserOnboarded } from "@/features/setup/utils";
-import { AbilityProvider } from "@/lib/ability-manager/client";
+import { requireSpace, requireUser } from "@/auth/data";
+import { BillingProvider } from "@/features/billing/client";
+import { SpaceProvider } from "@/features/space/client";
 import { TimezoneProvider } from "@/lib/timezone/client/context";
-import { SpaceSidebar } from "./components/sidebar/space-sidebar";
-import { SpaceSidebarProvider } from "./components/sidebar/space-sidebar-provider";
-import { TopBar, TopBarLeft, TopBarRight } from "./components/top-bar";
 
 async function loadData() {
-  const { user, space } = await loadCurrentUserSpace();
-
-  if (!isUserOnboarded(user)) {
-    redirect("/setup");
-  }
+  const [user, space] = await Promise.all([requireUser(), requireSpace()]);
 
   return {
     user,
@@ -34,40 +20,12 @@ export default async function Layout({
   const { user, space } = await loadData();
 
   return (
-    <AbilityProvider user={user} context={{ space }}>
-      <TimezoneProvider initialTimezone={user.timeZone}>
-        <SpaceSidebarProvider>
-          <CommandMenu />
-          <SpaceSidebar />
-          <SidebarInset className="min-w-0">
-            <TopBar className="md:hidden">
-              <TopBarLeft>
-                <SidebarTrigger />
-              </TopBarLeft>
-              <TopBarRight>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="rounded-full"
-                  size="icon"
-                >
-                  <Link href="/account/profile">
-                    <OptimizedAvatarImage
-                      src={user.image}
-                      name={user.name}
-                      size="sm"
-                    />
-                  </Link>
-                </Button>
-              </TopBarRight>
-            </TopBar>
-            <LicenseLimitWarning />
-            <div className="flex flex-1 flex-col">
-              <div className="flex flex-1 flex-col">{children}</div>
-            </div>
-          </SidebarInset>
-        </SpaceSidebarProvider>
-      </TimezoneProvider>
-    </AbilityProvider>
+    <SpaceProvider key={space.id} data={space} userId={user.id}>
+      <BillingProvider>
+        <TimezoneProvider initialTimezone={user.timeZone}>
+          {children}
+        </TimezoneProvider>
+      </BillingProvider>
+    </SpaceProvider>
   );
 }

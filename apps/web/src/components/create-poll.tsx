@@ -1,5 +1,4 @@
 "use client";
-import { usePostHog } from "@rallly/posthog/client";
 import { Button } from "@rallly/ui/button";
 import {
   Card,
@@ -39,7 +38,7 @@ export interface CreatePollPageProps {
 
 export const CreatePoll: React.FunctionComponent = () => {
   const router = useRouter();
-  const { user, createGuestIfNeeded } = useUser();
+  const { createGuestIfNeeded } = useUser();
   const form = useForm<NewEventData>({
     defaultValues: {
       title: "",
@@ -61,7 +60,6 @@ export const CreatePoll: React.FunctionComponent = () => {
 
   useUnmount(clear);
 
-  const posthog = usePostHog();
   const createPoll = trpc.polls.create.useMutation({
     networkMode: "always",
     onError: (error) => {
@@ -75,13 +73,13 @@ export const CreatePoll: React.FunctionComponent = () => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(async (formData) => {
-          const title = required(formData?.title);
+          const title = required(formData?.title.trim());
           await createGuestIfNeeded();
           await createPoll.mutateAsync(
             {
               title: title,
-              location: formData?.location,
-              description: formData?.description,
+              location: formData?.location?.trim(),
+              description: formData?.description?.trim(),
               timeZone: formData?.timeZone,
               hideParticipants: formData?.hideParticipants,
               disableComments: formData?.disableComments,
@@ -94,15 +92,6 @@ export const CreatePoll: React.FunctionComponent = () => {
             },
             {
               onSuccess: (res) => {
-                posthog?.capture("created poll", {
-                  pollId: res.id,
-                  numberOfOptions: formData.options?.length,
-                  optionsView: formData?.view,
-                  tier: user.tier,
-                  $set: {
-                    last_poll_created_at: new Date().toISOString(),
-                  },
-                });
                 router.push(`/poll/${res.id}`);
               },
             },
@@ -132,7 +121,7 @@ export const CreatePoll: React.FunctionComponent = () => {
           <PollSettingsForm />
           <hr />
           <Button
-            loading={createPoll.isPending || createPoll.isSuccess}
+            loading={form.formState.isSubmitting || createPoll.isSuccess}
             size="lg"
             type="submit"
             className="w-full"

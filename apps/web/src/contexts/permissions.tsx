@@ -30,14 +30,15 @@ export const usePermissions = () => {
   const role = useRole();
   const { participants } = useParticipants();
   return {
-    isUser: (userId: string) => userId === user.id || userId === context.userId,
+    isUser: (userId: string) =>
+      userId === user?.id || userId === context.userId,
     canAddNewParticipant: poll.status === "live",
     canEditParticipant: (participantId: string) => {
       if (poll.status !== "live") {
         return false;
       }
 
-      if (role === "admin" && ownsObject(poll)) {
+      if (role === "admin") {
         return true;
       }
 

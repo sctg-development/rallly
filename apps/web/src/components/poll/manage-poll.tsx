@@ -27,15 +27,14 @@ import {
 import Link from "next/link";
 import * as React from "react";
 
-import { DuplicateDialog } from "@/app/[locale]/poll/[urlId]/duplicate-dialog";
-import { PayWallDialog } from "@/components/pay-wall-dialog";
+import { DuplicateDialog } from "@/app/[locale]/(optional-space)/poll/[urlId]/duplicate-dialog";
 import { FinalizePollDialog } from "@/components/poll/manage-poll/finalize-poll-dialog";
 import { ProBadge } from "@/components/pro-badge";
 import { Trans } from "@/components/trans";
 import { usePoll } from "@/contexts/poll";
+import { useBilling } from "@/features/billing/client";
+import { useSpace } from "@/features/space/client";
 import { trpc } from "@/trpc/client";
-
-import { useUser } from "../user-provider";
 import { DeletePollDialog } from "./manage-poll/delete-poll-dialog";
 import { useCsvExporter } from "./manage-poll/use-csv-exporter";
 
@@ -125,7 +124,7 @@ const ManagePoll: React.FunctionComponent<{
 }> = ({ disabled }) => {
   const poll = usePoll();
   const queryClient = trpc.useUtils();
-  const { user } = useUser();
+  const space = useSpace();
   const reopen = trpc.polls.reopen.useMutation({
     onMutate: () => {
       queryClient.polls.get.setData({ urlId: poll.id }, (oldPoll) => {
@@ -143,7 +142,7 @@ const ManagePoll: React.FunctionComponent<{
   const [showDeletePollDialog, setShowDeletePollDialog] = React.useState(false);
   const duplicateDialog = useDialog();
   const finalizeDialog = useDialog();
-  const paywallDialog = useDialog();
+  const { showPayWall } = useBilling();
   const posthog = usePostHog();
   const { exportToCsv } = useCsvExporter();
 
@@ -202,8 +201,8 @@ const ManagePoll: React.FunctionComponent<{
               <DropdownMenuItem
                 disabled={!!poll.event}
                 onClick={() => {
-                  if (user.tier !== "pro") {
-                    paywallDialog.trigger();
+                  if (space.data.tier !== "pro") {
+                    showPayWall();
                     posthog?.capture("trigger paywall", {
                       poll_id: poll.id,
                       from: "manage-poll",
@@ -218,7 +217,7 @@ const ManagePoll: React.FunctionComponent<{
                   <CalendarCheck2Icon />
                 </Icon>
                 <Trans i18nKey="finishPoll" defaults="Finalize" />
-                <ProBadge />
+                {space.data.tier !== "pro" ? <ProBadge /> : null}
               </DropdownMenuItem>
               <PauseResumeToggle />
             </>
@@ -231,8 +230,8 @@ const ManagePoll: React.FunctionComponent<{
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => {
-              if (user.tier !== "pro") {
-                paywallDialog.trigger();
+              if (space.data.tier !== "pro") {
+                showPayWall();
                 posthog?.capture("trigger paywall", {
                   poll_id: poll.id,
                   action: "duplicate",
@@ -245,7 +244,7 @@ const ManagePoll: React.FunctionComponent<{
           >
             <DropdownMenuItemIconLabel icon={CopyIcon}>
               <Trans i18nKey="duplicate" defaults="Duplicate" />
-              <ProBadge />
+              {space.data.tier !== "pro" ? <ProBadge /> : null}
             </DropdownMenuItemIconLabel>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -271,7 +270,6 @@ const ManagePoll: React.FunctionComponent<{
         {...duplicateDialog.dialogProps}
       />
       <FinalizePollDialog {...finalizeDialog.dialogProps} />
-      <PayWallDialog {...paywallDialog.dialogProps} />
     </>
   );
 };

@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Trans } from "react-i18next/TransWithoutContext";
-
-import { GoogleProvider } from "@/auth/providers/google";
-import { MicrosoftProvider } from "@/auth/providers/microsoft";
-import { OIDCProvider } from "@/auth/providers/oidc";
-import { getInstanceSettings } from "@/features/instance-settings/queries";
+import { env } from "@/env";
 import { getTranslation } from "@/i18n/server";
+import { authLib, getSession } from "@/lib/auth";
+import { isFeatureEnabled } from "@/lib/feature-flags/server";
+import { getRegistrationEnabled } from "@/utils/get-registration-enabled";
 import {
   AuthPageContainer,
   AuthPageContent,
@@ -22,13 +22,13 @@ import { OrDivider } from "./components/or-divider";
 import { SSOProvider } from "./components/sso-provider";
 
 async function loadData() {
-  const [instanceSettings, { t }] = await Promise.all([
-    getInstanceSettings(),
+  const [isRegistrationEnabled, { t }] = await Promise.all([
+    getRegistrationEnabled(),
     getTranslation(),
   ]);
 
   return {
-    instanceSettings,
+    isRegistrationEnabled,
     t,
   };
 }
@@ -39,15 +39,20 @@ export default async function LoginPage(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
+  const session = await getSession();
+  if (session?.user && !session.user.isGuest) {
+    return redirect("/");
+  }
+  const { isRegistrationEnabled, t } = await loadData();
+  const isEmailLoginEnabled = isFeatureEnabled("emailLogin");
 
-  const { instanceSettings, t } = await loadData();
-  const oidcProvider = OIDCProvider();
-  const socialProviders = [GoogleProvider(), MicrosoftProvider()].filter(
-    Boolean,
+  const hasGoogleProvider = !!authLib.options.socialProviders.google;
+  const hasMicrosoftProvider = !!authLib.options.socialProviders.microsoft;
+  const hasOidc = !!authLib.options.plugins.find(
+    (plugin) => plugin.id === "generic-oauth",
   );
-  const hasAlternateLoginMethods = [...socialProviders, oidcProvider].some(
-    Boolean,
-  );
+  const hasAlternateLoginMethods =
+    hasGoogleProvider || hasMicrosoftProvider || hasOidc;
 
   return (
     <AuthPageContainer>
@@ -56,40 +61,51 @@ export default async function LoginPage(props: {
           <Trans t={t} ns="app" i18nKey="loginTitle" defaults="Welcome" />
         </AuthPageTitle>
         <AuthPageDescription>
-          <Trans
-            t={t}
-            ns="app"
-            i18nKey="loginDescription"
-            defaults="Login to your account to continue"
-          />
+          {!isEmailLoginEnabled && !hasAlternateLoginMethods ? (
+            <Trans
+              t={t}
+              ns="app"
+              i18nKey="loginNotConfigured"
+              defaults="Login is currently not configured."
+            />
+          ) : (
+            <Trans
+              t={t}
+              ns="app"
+              i18nKey="loginDescription"
+              defaults="Login to your account to continue"
+            />
+          )}
         </AuthPageDescription>
       </AuthPageHeader>
       <AuthPageContent>
-        <LoginWithEmailForm />
-        {hasAlternateLoginMethods ? <OrDivider /> : null}
-        {oidcProvider ? (
-          <LoginWithOIDC
-            name={oidcProvider.name}
-            redirectTo={searchParams?.redirectTo}
-          />
-        ) : null}
-        {socialProviders ? (
-          <div className="grid gap-4">
-            {socialProviders.map((provider) =>
-              provider ? (
-                <SSOProvider
-                  key={provider.id}
-                  providerId={provider.id}
-                  name={provider.options?.name || provider.name}
-                  redirectTo={searchParams?.redirectTo}
-                />
-              ) : null,
-            )}
-          </div>
-        ) : null}
+        {isEmailLoginEnabled && <LoginWithEmailForm />}
+        {isEmailLoginEnabled && hasAlternateLoginMethods ? <OrDivider /> : null}
+        <div className="grid gap-3">
+          {hasOidc ? (
+            <LoginWithOIDC
+              name={env.OIDC_NAME}
+              redirectTo={searchParams?.redirectTo}
+            />
+          ) : null}
+          {hasGoogleProvider ? (
+            <SSOProvider
+              providerId="google"
+              name="Google"
+              redirectTo={searchParams?.redirectTo}
+            />
+          ) : null}
+          {hasMicrosoftProvider ? (
+            <SSOProvider
+              providerId="microsoft"
+              name="Microsoft"
+              redirectTo={searchParams?.redirectTo}
+            />
+          ) : null}
+        </div>
       </AuthPageContent>
       <AuthErrors />
-      {!instanceSettings?.disableUserRegistration ? (
+      {isRegistrationEnabled ? (
         <AuthPageExternal>
           <Trans
             t={t}

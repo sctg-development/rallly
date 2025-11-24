@@ -28,7 +28,6 @@
   "freeSchedulingPollTitle": "Hitta ett datum för ditt nästa evenemang",
   "freeSchedulingPollDescription": "Rallly låter dig skapa snygga och lättanvända schemaläggningsförfrågan så att du kan hitta den bästa tiden för ditt nästa evenemang.",
   "new": "Ny",
-  "metaTitle": "Rallly - Schemalägg gruppmöten",
   "metaDescription": "Rallly är det snabbaste och enklaste schemaläggnings- och samarbetsverktyget. Skapa en mötesförfrågan på några sekunder, ingen inloggning krävs.",
   "when2meetAlternativeMetaTitle": "Bästa alternativet till When2Meet: Rallly",
   "when2meetAlternativeMetaDescription": "Hitta ett bättre sätt att schemalägga möten med Rallly, det bästa fria alternativet till When2Meet. Lätt att använda och gratis.",
@@ -37,6 +36,5 @@
   "meetingPoll": "Skapa professionella mötes-förfrågningar med Rallly",
   "meetingPollDescription": "Mötes-förfrågningar är ett bra sätt att reda på om personer är tillgängliga. Rallly låter dig enkelt skapa snygga förfrågningar.",
   "meetingPollMetaTitle": "Mötesförfrågan",
-  "meetingPollMetaDescription": "Med vår förfrågningsfunktion kan du enkelt schemalägga möten så att allas tillgänglighet beaktas.",
-  "quickCreateBlog": "Introducerar SnabbSkapa"
+  "meetingPollMetaDescription": "Med vår förfrågningsfunktion kan du enkelt schemalägga möten så att allas tillgänglighet beaktas."
 }

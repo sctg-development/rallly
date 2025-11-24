@@ -12,10 +12,12 @@ import { Icon } from "@rallly/ui/icon";
 import { MenuIcon } from "lucide-react";
 import type { Viewport } from "next";
 import Image from "next/image";
-import Link from "next/link";
+
 import { Trans } from "react-i18next/TransWithoutContext";
+
 import { LoginButton } from "@/components/login-button";
 import { SignUpButton } from "@/components/sign-up-button";
+import { LinkBase } from "@/i18n/client/link";
 import { getTranslation } from "@/i18n/server";
 import { linkToApp } from "@/lib/linkToApp";
 import { Footer } from "./footer";
@@ -30,24 +32,17 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default async function Root(props: {
-  children: React.ReactNode;
-  params: Promise<{ locale: string }>;
-}) {
-  const params = await props.params;
-
-  const { locale } = params;
-
+export default async function Root(props: { children: React.ReactNode }) {
   const { children } = props;
 
-  const { t } = await getTranslation(locale, "common");
+  const { t } = await getTranslation();
   return (
     <div className="relative z-10 mx-auto flex min-h-full w-full max-w-7xl flex-col space-y-8 p-4 sm:p-8">
       <header className="flex w-full items-center">
         <div className="flex grow items-center gap-x-12">
-          <Link className="inline-block rounded" href="/">
+          <LinkBase className="inline-block rounded" href="/">
             <Image src="/logo.svg" width={130} height={30} alt="rallly.co" />
-          </Link>
+          </LinkBase>
           <nav className="hidden items-center gap-2 lg:flex">
             <NavLink href="https://support.rallly.co/workflow/create">
               <Trans t={t} i18nKey="howItWorks" defaults="How it Works" />
@@ -79,36 +74,36 @@ export default async function Root(props: {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-48" align="end" sideOffset={16}>
                 <DropdownMenuItem asChild>
-                  <Link href="https://support.rallly.co/workflow/create">
+                  <LinkBase href="https://support.rallly.co/workflow/create">
                     <Trans t={t} i18nKey="howItWorks" defaults="How it Works" />
-                  </Link>
+                  </LinkBase>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/pricing">
+                  <LinkBase href="/pricing">
                     <Trans t={t} i18nKey="pricing" defaults="Pricing" />
-                  </Link>
+                  </LinkBase>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/blog">
+                  <LinkBase href="/blog">
                     <Trans t={t} i18nKey="blog" />
-                  </Link>
+                  </LinkBase>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="https://support.rallly.co">
+                  <LinkBase href="https://support.rallly.co">
                     <Trans t={t} i18nKey="support" />
-                  </Link>
+                  </LinkBase>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="space-y-2">
                   <Button variant="secondary" className="w-full" asChild>
-                    <Link href={linkToApp("/login")}>
+                    <LinkBase href={linkToApp("/login")}>
                       <Trans t={t} i18nKey="login" defaults="Login" />
-                    </Link>
+                    </LinkBase>
                   </Button>
                   <Button variant="primary" className="w-full" asChild>
-                    <Link href={linkToApp("/register")}>
+                    <LinkBase href={linkToApp("/register")}>
                       <Trans t={t} i18nKey="signUp" defaults="Sign up" />
-                    </Link>
+                    </LinkBase>
                   </Button>
                 </DropdownMenuLabel>
               </DropdownMenuContent>
