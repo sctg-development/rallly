@@ -78,11 +78,15 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=ismogroup/busybox:1.37.0-php-8.3-apache /busybox-1.37.0/_install/bin/busybox /bin/busybox
 RUN  /bin/busybox --install -s
-RUN curl -k -L https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - &&\
-  echo "deb https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list &&\
-  apt-get update &&\
-  apt-get install -y postgresql-client-17 &&\
-  rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+  # Use curl with http1.1 and retries to avoid intermittent HTTP/2 errors, save key and dearmor it
+  curl -fsS --retry 3 --retry-delay 5 --http1.1 https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /usr/share/keyrings/postgresql-archive-keyring.asc; \
+  gpg --dearmor --yes -o /usr/share/keyrings/postgresql-archive-keyring.gpg /usr/share/keyrings/postgresql-archive-keyring.asc; \
+  echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list; \
+  apt-get update; \
+  apt-get install -y postgresql-client-17; \
+  rm -rf /var/lib/apt/lists/*; \
+  rm -f /usr/share/keyrings/postgresql-archive-keyring.asc
 RUN yarn global add prisma
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
