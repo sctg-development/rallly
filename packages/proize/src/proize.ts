@@ -1,8 +1,8 @@
-import { PrismaClient, SubscriptionStatus, SubscriptionInterval } from './prisma/index.js';
+import { PrismaClient, SubscriptionStatus, SubscriptionInterval } from './prisma/client';
 
 export async function createSubscriptionsAndPaymentMethodsForAllUsers(databaseUrl: string) {
     // Initialize Prisma client with connection string
-    const prisma = new PrismaClient({
+    const prisma: any = new PrismaClient({
         datasources: {
             db: {
                 url: databaseUrl,
@@ -85,7 +85,7 @@ export async function createSubscriptionsAndPaymentMethodsForAllUsers(databaseUr
                         type: 'card',
                         data: {
                             brand: 'visa',
-                            last4: (Math.floor(Math.random() * 10000)).toString(), // random integer between 0000 and 9999
+                            last4: (Math.floor(Math.random() * 10000)).toString().padStart(4, '0'), // random integer between 0000 and 9999
                             expMonth: 12,
                             expYear: new Date().getFullYear() + 5,
                             name: user.name || 'Default Card'
