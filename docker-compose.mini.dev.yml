@@ -1,6 +1,6 @@
 services:
   rallly_db:
-    image: postgres:14.2
+    image: postgres:16
     restart: always
     ports:
       - "5450:5432"
@@ -22,11 +22,13 @@ services:
       - "1025:1025"
 
   rallly_selfhosted:
-    build:
-      args:
-        - SELF_HOSTED=false
-      context: .
-      dockerfile: ./apps/web/Dockerfile.sctg
+    #image: lukevella/rallly:local
+    image: sctg/rally:local
+    # build:
+    #   args:
+    #     - SELF_HOSTED=false
+    #   context: .
+    #   dockerfile: ./apps/web/Dockerfile.sctg
     restart: always
     depends_on:
       rallly_db:
@@ -34,13 +36,17 @@ services:
     ports:
       - 3000:3000
     environment:
+      - ALLOWED_EMAILS=*@parapente.eu.org,*@cdvl59.eu.org,*@sctg.eu.org,*@kerbra.com,*@highcanfly.club,*@lecugnonnet.fr
       - DATABASE_URL=postgres://postgres:postgres@rallly_db/rallly
       - API_SECRET=abcdef1234567890abcdef1234567890
+      - BETTER_AUTH_SECRET=abcdef1234567890abcdef1234567890
+      - BETTER_AUTH_URL=http://localhost:3000
       - SMTP_HOST=mailpit
       - SMTP_PORT=1025
       - NEXT_PUBLIC_SELF_HOSTED=false
       - SUPPORT_EMAIL=support@sctg.eu.org
       - SECRET_PASSWORD=abcdef1234567890abcdef1234567890
+      - CRON_SECRET=abcdef1234567890abcdef1234567890
       - NEXT_PUBLIC_BASE_URL=http://localhost:3000
       - AUTH_URL=http://localhost:3000
       - SENTRY_IGNORE_API_RESOLUTION_ERROR=1

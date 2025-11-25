@@ -1,7 +1,8 @@
 FROM node:20 AS builder
-
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /app
-RUN yarn global add turbo
+RUN corepack enable && pnpm add -g turbo
 COPY . .
 # SCTG Branding
 RUN cp assets/images/logo-sctg.svg assets/images/logo-color.svg
@@ -54,9 +55,9 @@ RUN if [ -f /app/packages/database/prisma/schema.prisma ]; then mkdir -p /app/pr
 # Build the project
 COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
-RUN if [ -f /app/prisma/schema.prisma ]; then pnpm dlx prisma@6.19.0 generate --schema ./prisma/schema.prisma; fi
-RUN pnpm install --no-frozen-lockfile
-RUN SKIP_ENV_VALIDATION=1 NODE_OPTIONS=--max-old-space-size=4096 pnpm run build
+RUN if [ -f /app/prisma/schema.prisma ]; then pnpm db:generate --schema ./prisma/schema.prisma || pnpm dlx prisma generate --schema ./prisma/schema.prisma; fi
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --no-frozen-lockfile
+RUN NODE_OPTIONS=--max-old-space-size=4096 SKIP_ENV_VALIDATION=1 pnpm build
 
 ARG APP_VERSION
 ENV NEXT_PUBLIC_APP_VERSION=$APP_VERSION
@@ -80,7 +81,7 @@ RUN apt-get update \
   xz-utils \
   curl \
   && rm -rf /var/lib/apt/lists/*
-
+RUN npm i -g pnpm
 WORKDIR /app
 COPY --from=ismogroup/busybox:1.37.0-php-8.3-apache /busybox-1.37.0/_install/bin/busybox /bin/busybox
 RUN  /bin/busybox --install -s
@@ -93,7 +94,7 @@ RUN set -eux; \
   apt-get install -y postgresql-client-17; \
   rm -rf /var/lib/apt/lists/*; \
   rm -f /usr/share/keyrings/postgresql-archive-keyring.asc
-RUN yarn global add prisma@6.19.0
+RUN npm add -g prisma@6
 # Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs --home /app --shell /bin/bash

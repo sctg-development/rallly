@@ -69,3 +69,7 @@ spec:
               value: {{ .Values.initFromS3 | quote }}
             - name: S3_RALLY_FILE
               value: {{ .Values.s3RallyFile | quote }}
+            - name: BETTER_AUTH_SECRET
+              value: {{ .Values.betterAuth.secret | quote }}
+            - name: BETTER_AUTH_URL
+              value: {{ .Values.betterAuth.url | quote }}

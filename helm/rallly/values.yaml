@@ -3,6 +3,9 @@ database:
 
 host: rallly.demo
 apiSecret: "abcdef1234567890abcdef1234567890"
+betterAuth:
+  secret: "abcdef1234567890abcdef1234567890"
+  url: "http://localhost:3000"
 updateStrategy: RollingUpdate
 secretPassword: "abcdef1234567890abcdef1234567890"
 supportEmail: "support@example.org"

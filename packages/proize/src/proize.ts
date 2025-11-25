@@ -31,23 +31,42 @@ export async function createSubscriptionsAndPaymentMethodsForAllUsers(databaseUr
 
         for (const user of users) {
             // 1. Check if user already has a subscription
-            const existingSubscription = await prisma.subscription.findUnique({
-                where: {
-                    userId: user.id
-                }
+            // Find the user's primary space (first space owned by the user). If the user
+            // doesn't have a space we'll create a personal one for them. We are using
+            // the space to attach the subscription because the app determines tier by
+            // subscription linked to a space.
+            let userSpace = await prisma.space.findFirst({ where: { ownerId: user.id } });
+            if (!userSpace) {
+                userSpace = await prisma.space.create({
+                    data: {
+                        name: 'Personal',
+                        ownerId: user.id,
+                        members: { create: { userId: user.id, role: 'ADMIN', lastSelectedAt: new Date() } },
+                    },
+                });
+            }
+
+            // Check if the space already has a subscription (ordered so active subscriptions are prioritized)
+            const existingSubscription = await prisma.subscription.findFirst({
+                where: { spaceId: userSpace.id },
+                orderBy: [{ active: 'desc' }, { createdAt: 'desc' }],
             });
 
-            if (existingSubscription) {
+            if (existingSubscription && existingSubscription.active) {
                 console.log(`User ${user.email} already has a subscription. Skipped.`);
                 subscriptionsSkipped++;
             } else {
                 // Create a new subscription
+                // Ensure space is marked as pro (helps queries relying on `space.tier`)
+                await prisma.space.update({ where: { id: userSpace.id }, data: { tier: 'pro' } });
+
                 await prisma.subscription.create({
                     data: {
                         id: `sub_${Date.now()}_${user.id.substring(0, 8)}`,
                         priceId: 'price_lifetime_premium',
                         amount: 5600, // 56€/year in cents
                         status: SubscriptionStatus.active,
+                        quantity: 999,
                         active: true,
                         currency: 'EUR',
                         interval: SubscriptionInterval.year,
@@ -57,9 +76,13 @@ export async function createSubscriptionsAndPaymentMethodsForAllUsers(databaseUr
                         cancelAtPeriodEnd: false,
                         user: {
                             connect: {
-                                id: user.id
-                            }
-                        }
+                                id: user.id,
+                            },
+                        },
+                        // `subscriptionItemId` is required in the schema
+                        subscriptionItemId: `sitem_${Date.now()}_${user.id.substring(0, 8)}`,
+                        // Attach subscription to the user's personal space by connecting the relation
+                        space: { connect: { id: userSpace.id } },
                     }
                 });
 
