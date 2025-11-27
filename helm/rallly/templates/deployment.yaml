@@ -73,3 +73,5 @@ spec:
               value: {{ .Values.betterAuth.secret | quote }}
             - name: BETTER_AUTH_URL
               value: {{ .Values.betterAuth.url | quote }}
+            - name: CRON_SECRET
+              value: {{ .Values.cronSecret | quote }}

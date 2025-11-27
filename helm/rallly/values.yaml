@@ -6,6 +6,7 @@ apiSecret: "abcdef1234567890abcdef1234567890"
 betterAuth:
   secret: "abcdef1234567890abcdef1234567890"
   url: "http://localhost:3000"
+cronSecret: "abcdef1234567890abcdef1234567890"
 updateStrategy: RollingUpdate
 secretPassword: "abcdef1234567890abcdef1234567890"
 supportEmail: "support@example.org"
