@@ -1,9 +1,9 @@
 dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
-  version: 16.6.3
+  version: 18.1.13
 - name: flex-smtpd
   repository: https://helm-repo.highcanfly.club
   version: 0.1.7
-digest: sha256:c04c5f08647f82ea8485f87631a281ade8334f4381f61f010472d161b1a42754
-generated: "2025-04-23T18:21:52.727522+02:00"
+digest: sha256:918503cab9327f72aa8965d8b0985f9f69669d5de2b30c08f3c101dd3a9de58b
+generated: "2025-11-27T10:03:28.215837+01:00"
