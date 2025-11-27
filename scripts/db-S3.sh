@@ -273,8 +273,27 @@ remove-old-backups() {
     fi
 }
 
+#Function to list backups in S3
+list-backups() {
+    echo "Listing backups in S3..."
+    mc ls s3backup/${S3_BUCKET}/${S3_PATH}
+}
+
+#Function to restore database from a specific S3 backup file
+restore-from-specific-backup() {
+    if [ -z "$1" ]; then
+        echo "Please provide the backup file name as an argument"
+        return 1
+    fi
+    export S3_RALLY_FILE="$1"
+    init-from-s3
+}
+
+# Provide usage information
 echo "Added S3 backup and restore functions"
 echo "Usage:"
 echo "  init-from-s3: Restore database from S3"
 echo "  backup-to-s3: Backup database to S3"
+echo "  list-backups: List backups in S3"
 echo "  remove-old-backups: Remove backups older than S3_MAX_DAYS from S3"
+echo "  restore-from-specific-backup <backup_file>: Restore database from a specific S3 backup file"
