@@ -1,0 +1,72 @@
+{{- if .Values.backupCron.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "rallly.fullname" . }}-s3-backup
+  labels:
+    app: {{ include "rallly.name" . }}
+spec:
+  schedule: {{ .Values.backupCron.schedule | quote }}
+  successfulJobsHistoryLimit: {{ .Values.backupCron.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.backupCron.failedJobsHistoryLimit }}
+  concurrencyPolicy: {{ .Values.backupCron.concurrencyPolicy | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: {{ include "rallly.name" . }}
+            job: s3-backup
+        spec:
+          {{- if .Values.backupCron.serviceAccountName }}
+          serviceAccountName: {{ .Values.backupCron.serviceAccountName }}
+          {{- end }}
+          restartPolicy: OnFailure
+          containers:
+            - name: s3-backup
+              image: {{- if .Values.backupCron.image.repository }}{{ printf "%s:%s" .Values.backupCron.image.repository (default "latest" .Values.backupCron.image.tag) }}{{- else }}{{ include "rallly.imageTag" . }}{{- end }}
+              imagePullPolicy: {{ .Values.backupCron.image.pullPolicy | default .Values.image.pullPolicy }}
+              env:
+                - name: DATABASE_URL
+                  value: {{ .Values.database.url | quote }}
+                - name: S3_BUCKET
+                  value: {{ .Values.s3Bucket | quote }}
+                - name: S3_BUCKET_NAME
+                  value: {{ .Values.s3Bucket | quote }}
+                - name: S3_ENDPOINT
+                  value: {{ .Values.s3Endpoint | quote }}
+                - name: S3_ACCESS_KEY
+                  value: {{ .Values.s3AccessKey | quote }}
+                - name: S3_ACCESS_KEY_ID
+                  value: {{ .Values.s3AccessKey | quote }}
+                - name: S3_SECRET_KEY
+                  value: {{ .Values.s3SecretKey | quote }}
+                - name: S3_SECRET_ACCESS_KEY
+                  value: {{ .Values.s3SecretKey | quote }}
+                - name: S3_REGION
+                  value: {{ .Values.s3Region | quote }}
+                - name: S3_PATH
+                  value: {{ .Values.s3Path | quote }}
+                - name: CRYPTOKEN
+                  value: {{ .Values.s3Cryptoken | quote }}
+                - name: POSTGRES_HOST
+                  value: {{ default "" .Values.postgresql.host | quote }}
+                - name: POSTGRES_USER
+                  value: {{ default "postgres" (index .Values.postgresql.auth "postgresUser") | quote }}
+                - name: POSTGRES_PASSWORD
+                  value: {{ default (index .Values.postgresql.auth "postgresPassword") "" | quote }}
+                - name: POSTGRES_DB
+                  value: {{ default (index .Values.postgresql.auth "database") "" | quote }}
+                - name: S3_RALLY_FILE
+                  value: {{ .Values.s3RallyFile | quote }}
+                - name: CRON_SECRET
+                  value: {{ .Values.cronSecret | quote }}
+              # If the script is installed in the image under /scripts/db-S3.sh this will call its function
+              command: ["/bin/bash", "-lc", "source /app/db-S3.sh && backup-to-s3 && remove-old-backups"]
+              {{- if .Values.backupCron.env }}
+              {{- range $name, $value := .Values.backupCron.env }}
+              - name: {{ $name }}
+                value: {{ $value | quote }}
+              {{- end }}
+              {{- end }}
+{{- end }}

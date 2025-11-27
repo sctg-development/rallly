@@ -77,3 +77,32 @@ helm uninstall -n rallly rallly
 - If you have enabled persistence, the data will be retained even after the release is deleted.
 - Make sure to configure secure passwords and secrets in production environments.
 - The chart includes an SMTP relay via the flex-smtpd dependency for email functionality.
+
+## Backup CronJob
+
+You can enable a Kubernetes CronJob that periodically runs the `backup-to-s3` function from `scripts/db-S3.sh` using the `backupCron` values.
+
+Example values to enable:
+
+```yaml
+backupCron:
+  enabled: true
+  schedule: "0 2 * * *"  # daily at 02:00
+  image:
+    repository: "sctg/rallly"
+    tag: "latest"
+  env:
+    S3_BUCKET: my-backups
+    S3_ENDPOINT: https://s3.example.com
+```
+
+The CronJob will execute:
+
+```
+/bin/bash -lc "source /scripts/db-S3.sh && backup-to-s3"
+```
+
+Notes:
+- The image used should include the `db-S3.sh` script under `/scripts/db-S3.sh` and must contain the utilities `mc`, `psql`, and `pg_dump`.
+- Provide S3 credentials and PostgreSQL connection via values or `backupCron.env`.
+

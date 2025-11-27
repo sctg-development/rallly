@@ -26,6 +26,23 @@ s3Cryptoken: ""
 s3RallyFile: ""
 initFromS3: "false"
 
+# CronJob settings for S3 backups (optional)
+backupCron:
+  enabled: false
+  # Cron schedule in standard cron format. Example: "0 2 * * *" (2:00 daily)
+  schedule: "0 2 * * *"
+  # Image override for the cron job. If empty, the same image as the app will be used.
+  image:
+    repository: ""
+    tag: ""
+    pullPolicy: "IfNotPresent"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  serviceAccountName: ""
+  # Optional additional env var overrides to pass to the cronjob container
+  env: {}
+
 postgresql:
   auth:
     postgresPassword: postgres
