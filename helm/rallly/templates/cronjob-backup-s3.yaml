@@ -24,7 +24,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: s3-backup
-              image: {{- if .Values.backupCron.image.repository }}{{ printf "%s:%s" .Values.backupCron.image.repository (default "latest" .Values.backupCron.image.tag) }}{{- else }}{{ include "rallly.imageTag" . }}{{- end }}
+              image: "{{- if .Values.backupCron.image.repository }}{{ printf "%s:%s" .Values.backupCron.image.repository (default "latest" .Values.backupCron.image.tag) }}{{- else }}{{ include "rallly.imageTag" . }}{{- end }}"
               imagePullPolicy: {{ .Values.backupCron.image.pullPolicy | default .Values.image.pullPolicy }}
               env:
                 - name: DATABASE_URL
@@ -61,12 +61,18 @@ spec:
                   value: {{ .Values.s3RallyFile | quote }}
                 - name: CRON_SECRET
                   value: {{ .Values.cronSecret | quote }}
-              # If the script is installed in the image under /scripts/db-S3.sh this will call its function
-              command: ["/bin/bash", "-lc", "source /app/db-S3.sh && backup-to-s3 && remove-old-backups"]
               {{- if .Values.backupCron.env }}
               {{- range $name, $value := .Values.backupCron.env }}
-              - name: {{ $name }}
-                value: {{ $value | quote }}
+                - name: {{ $name }}
+                  value: {{ $value | quote }}
               {{- end }}
               {{- end }}
+              # If the script is installed in the image under /scripts/db-S3.sh this will call its function
+              command: ["/bin/bash", "-lc", "source /app/db-S3.sh && backup-to-s3 && remove-old-backups"]
+              {{- if .Values.backupCron.secretName }}
+              envFrom:
+                - secretRef:
+                    name: {{ .Values.backupCron.secretName | quote }}
+              {{- end }}
+              
 {{- end }}

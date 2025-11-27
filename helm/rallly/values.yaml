@@ -42,6 +42,8 @@ backupCron:
   serviceAccountName: ""
   # Optional additional env var overrides to pass to the cronjob container
   env: {}
+  # Optional secret to populate envFrom (useful for credentials)
+  secretName: ""
 
 postgresql:
   auth:

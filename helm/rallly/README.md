@@ -105,4 +105,6 @@ The CronJob will execute:
 Notes:
 - The image used should include the `db-S3.sh` script under `/scripts/db-S3.sh` and must contain the utilities `mc`, `psql`, and `pg_dump`.
 - Provide S3 credentials and PostgreSQL connection via values or `backupCron.env`.
+ - You can also provide credentials via a Kubernetes Secret and set `backupCron.secretName` in values to mount it via `envFrom` in the CronJob container.
+ - Use `backupCron.serviceAccountName` to specify a ServiceAccount with appropriate RBAC if your cluster restricts Job permissions.
 
