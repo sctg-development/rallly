@@ -19,12 +19,12 @@ jobs:
           echo "BASE_URL=${{ secrets.APP_BASE_URL }}" >> $GITHUB_ENV
       - name: Mark inactive polls as deleted
         run: |
-          curl -X "POST" --fail "${BASE_URL}/api/house-keeping/delete-inactive-polls" \
+          curl -X "GET" --fail "${BASE_URL}/api/house-keeping/delete-inactive-polls" \
           -H "Authorization: Bearer ${API_SECRET}" \
           --max-time 300
       - name: Remove deleted polls
         run: |
-          curl -X "POST" --fail "${BASE_URL}/api/house-keeping/remove-deleted-polls" \
+          curl -X "GET" --fail "${BASE_URL}/api/house-keeping/remove-deleted-polls" \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer ${API_SECRET}" \
           --max-time 300
