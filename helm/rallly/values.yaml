@@ -2,6 +2,7 @@ database:
   url: postgres://postgres:postgres@rallly-postgresql/rallly
 
 host: rallly.demo
+selfHosted: "false"
 apiSecret: "abcdef1234567890abcdef1234567890"
 betterAuth:
   secret: "abcdef1234567890abcdef1234567890"

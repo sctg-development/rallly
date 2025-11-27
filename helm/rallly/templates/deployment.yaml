@@ -37,6 +37,8 @@ spec:
               value: {{ .Values.noReplyEmail | quote }}
             - name: ALLOWED_EMAILS
               value: {{ .Values.allowedEmails | quote }}
+            - name: SMTP_REJECT_UNAUTHORIZED
+              value: "false"  # To allow self-signed certificates
             - name: NEXT_PUBLIC_BASE_URL
               value: {{ .Values.baseUrl | quote }}
             - name: SMTP_HOST
