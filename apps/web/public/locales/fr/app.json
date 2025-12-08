@@ -149,7 +149,6 @@
   "expand": "Agrandir",
   "supportDescription": "Besoin d'aide pour quelque chose?",
   "contactSupport": "Contacter le support",
-  "pricing": "Tarifs",
   "pollSettingsDescription": "Personnaliser le comportement de votre sondage",
   "requireParticipantEmailLabel": "Rendre l'adresse e-mail requise pour les participants",
   "hideParticipantsLabel": "Cacher la liste des participants aux autres participants",
@@ -221,7 +220,6 @@
   "verifyEmail": "Vérifiez votre e-mail",
   "alreadyHaveAccount": "Vous disposez déjà d'un compte ? <a>Connectez-vous</a>",
   "loginDescription": "Connectez-vous à votre compte pour continuer",
-  "userNotFound": "Il n’y a aucun utilisateur avec cette adresse e-mail",
   "loginTitle": "Bienvenue",
   "registerTitle": "Créer un compte",
   "registerDescription": "Simplifiez votre processus de planification et gagnez du temps",
@@ -234,7 +232,6 @@
   "quickCreateGetNotifications": "Recevoir des notifications par e-mail",
   "quickCreateManagePollsFromAnyDevice": "Gérer vos sondages depuis n'importe quel appareil",
   "loginVerifyTitle": "Terminer la création du compte",
-  "loginVerifyDescription": "Vérifiez votre boîte mail pour obtenir le code de vérification",
   "tooManyRequests": "Trop de requêtes émises dans un délai donné",
   "tooManyRequestsDescription": "Veuillez réessayer plus tard.",
   "billingSubscriptionDescription": "Gérez votre abonnement actuel.",
@@ -555,5 +552,6 @@
   "resetPasswordButton": "Réinitialiser le mot de passe",
   "passwordStrength": "Robustesse du mot de passe",
   "emailChangeInvalidUserId": "Veuillez vous connecter avec la même adresse e-mail que celle que vous avez utilisée pour demander le changement.",
-  "ssoAuthenticationOnly": "L'authentification est gérée par Single Sign-On (SSO). La gestion des mots de passe n'est pas disponible."
+  "ssoAuthenticationOnly": "L'authentification est gérée par Single Sign-On (SSO). La gestion des mots de passe n'est pas disponible.",
+  "loginVerifyCheckEmail": "Si un compte existe avec cet e-mail, vous recevrez un code de vérification à <b>{email}</b>"
 }
