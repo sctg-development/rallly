@@ -9,9 +9,9 @@ function createAppUrl(subpath) {
   return url.href;
 }
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   productionBrowserSourceMaps: true,
-  output: "standalone",
   transpilePackages: [
     "@rallly/ui",
     "@rallly/tailwind-config",
@@ -94,6 +94,26 @@ const nextConfig = {
       {
         source: "/S17JJrRWc",
         destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/availability-poll",
+        destination: "/free-scheduling-poll",
+        permanent: true,
+      },
+      {
+        source: "/meeting-poll", 
+        destination: "/free-scheduling-poll",
+        permanent: true,
+      },
+      {
+        source: "/:locale/availability-poll",
+        destination: "/:locale/free-scheduling-poll",
+        permanent: true,
+      },
+      {
+        source: "/:locale/meeting-poll",
+        destination: "/:locale/free-scheduling-poll",
         permanent: true,
       },
     ];
